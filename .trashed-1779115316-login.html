@@ -18,7 +18,7 @@
     }
     body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
     
-    /* GLOBAL LOADER */
+    /* GLOBAL LOADER (The Shield) */
     #global-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .spinner { border: 4px solid rgba(0, 212, 255, 0.1); border-top: 4px solid var(--accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -56,7 +56,7 @@
 
 <main>
   <div class="login-header">
-    <a href="index.html" style="text-decoration:none; color:inherit;"><h1>Health<span>Chain</span></h1></a>
+    <h1>Health<span>Chain</span></h1>
     <p style="color: var(--muted);">Secure your medical records</p>
   </div>
 
@@ -124,33 +124,49 @@
     else { btn.classList.remove('loading'); btn.innerHTML = text; }
   }
 
-  // 3. CLEAN AUTH CHECK (If already logged in, skip login page)
+  // 3. SUPERFAST BRAHMASTRA LOGIC
   auth.onAuthStateChanged((user) => {
     if (user) {
+      // User is already logged in -> Go to Dashboard immediately!
       window.location.replace(selectedRole === 'patient' ? 'patient.html' : 'doctor.html');
     } else {
-      globalLoader.style.display = 'none';
+      // ONLY check Google Redirect if the user ACTUALLY clicked the Google button
+      if (sessionStorage.getItem('googleLoginPending')) {
+        auth.getRedirectResult().then((result) => {
+          sessionStorage.removeItem('googleLoginPending');
+          if (result.credential) {
+            const u = result.user;
+            db.collection("users").doc(u.uid).set({
+              uid: u.uid, email: u.email, name: u.displayName || "User", role: selectedRole,
+              lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true }).then(() => {
+              window.location.replace(selectedRole === 'patient' ? 'patient.html' : 'doctor.html');
+            });
+          } else {
+            globalLoader.style.display = 'none';
+          }
+        }).catch((err) => {
+          sessionStorage.removeItem('googleLoginPending');
+          globalLoader.style.display = 'none';
+          alert("Google Error: " + err.message);
+        });
+      } else {
+        // NORMAL LOAD: INSTANTLY HIDE LOADER
+        globalLoader.style.display = 'none';
+      }
     }
   });
 
-  // 4. GOOGLE LOGIN (FIXED: Mobile Popup)
+  // 4. GOOGLE LOGIN
   function handleGoogleLogin() {
     globalLoader.style.display = 'flex';
     document.getElementById('loader-text').textContent = "Connecting to Google...";
     
+    // YE HAI MAGIC TRICK! System ko pata chal jayega ki ab check karna hai
+    sessionStorage.setItem('googleLoginPending', 'true'); 
+    
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).then((result) => {
-      const u = result.user;
-      db.collection("users").doc(u.uid).set({
-        uid: u.uid, email: u.email, name: u.displayName || "User", role: selectedRole,
-        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true }).then(() => {
-        window.location.replace(selectedRole === 'patient' ? 'patient.html' : 'doctor.html');
-      });
-    }).catch((err) => {
-      globalLoader.style.display = 'none';
-      alert("Google Error: " + err.message);
-    });
+    auth.signInWithRedirect(provider);
   }
 
   // 5. EMAIL SIGNUP
@@ -166,6 +182,9 @@
           uid: userCred.user.uid, email: email, role: selectedRole,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+      })
+      .then(() => {
+         // Auto-redirect happens via onAuthStateChanged
       })
       .catch(err => {
         setBtnLoading('signupBtn', false, 'Create Account');
@@ -192,6 +211,7 @@
         }
       });
   }
+
 </script>
 </body>
 </html>

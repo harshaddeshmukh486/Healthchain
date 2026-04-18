@@ -33,8 +33,8 @@
     .logout-btn { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.3s; font-size: 0.85rem; }
     .logout-btn:hover { background: var(--danger); color: white; }
 
-    /* Dashboard Layout (Mobile Responsive) */
-    .dashboard-container { padding: 20px 4%; max-width: 1200px; margin: 0 auto; width: 100%; flex: 1; overflow-x: hidden; }
+    /* Dashboard Layout */
+    .dashboard-container { padding: 40px 5%; max-width: 1200px; margin: 0 auto; width: 100%; flex: 1; }
     .welcome-section { margin-bottom: 40px; }
     .welcome-section h1 { font-family: 'Syne', sans-serif; font-size: 2.2rem; margin-bottom: 5px; }
     .welcome-section p { color: var(--text-muted); font-size: 1.1rem; }
@@ -90,19 +90,6 @@
     .revoke-btn { color: var(--danger); background: transparent; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
     .revoke-btn:hover { text-decoration: underline; }
 
-    /* MOBILE RESPONSIVE FIX */
-    @media (max-width: 768px) {
-      .welcome-section h1 { font-size: 1.6rem; }
-      .welcome-section p { font-size: 0.95rem; }
-      .stats-grid { grid-template-columns: 1fr; gap: 15px; }
-      nav { padding: 15px 4%; }
-      .logo { font-size: 1.2rem; }
-      .user-name { display: none; }
-      .panel { padding: 15px; }
-      .btn { font-size: 0.85rem; padding: 8px 15px; }
-      .report-card { flex-direction: column; align-items: flex-start; gap: 10px; }
-      .report-card > div:last-child { width: 100%; text-align: left !important; }
-    }
   </style>
 </head>
 <body>
@@ -113,7 +100,7 @@
 </div>
 
 <nav>
-  <a href="index.html" class="logo">Health<span>Chain</span></a>
+  <a href="#" class="logo">Health<span>Chain</span></a>
   <div class="user-profile">
     <div class="user-name" id="display-name">Loading...</div>
     <button class="logout-btn" onclick="handleLogout()">Logout</button>
@@ -228,9 +215,10 @@
 
   let currentUser = null;
 
-  // 2. Auth Check (The Shield)
+  // 2. Auth Check (The Shield) - SUPERFAST BYPASS
   auth.onAuthStateChanged((user) => {
     if (user) {
+      // User is logged in, hide loader immediately without checking Firestore!
       currentUser = user;
       document.getElementById('global-loader').style.display = 'none';
       document.getElementById('display-name').textContent = user.displayName || user.email.split('@')[0];
@@ -242,7 +230,7 @@
     }
   });
 
-  // Logout (Properly removes session and sends to login page)
+  // Logout
   function handleLogout() {
     auth.signOut().then(() => {
       window.location.replace('login.html');
@@ -255,6 +243,7 @@
     form.style.display = form.style.display === 'none' ? 'block' : 'none';
   }
 
+  // Basic Hash Generator (For UI Demo purposes)
   function generateHash() {
     return '0x' + Array.from({length: 40}, () => Math.floor(Math.random() * 16).toString(16)).join('');
   }
@@ -291,7 +280,9 @@
     db.collection("reports").where("patientId", "==", currentUser.uid).orderBy("date", "desc")
       .onSnapshot((querySnapshot) => {
         const container = document.getElementById('reports-container');
+        
         document.getElementById('total-reports-count').textContent = querySnapshot.size;
+        
         let abnormalCount = 0;
         
         if (querySnapshot.empty) {

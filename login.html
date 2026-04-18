@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HealthChain Web App— Login</title>
+  <title>HealthChain — Login</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -11,55 +11,73 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
   <style>
-    /* Aapka Favourite Premium Dark UI CSS */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #060a12; --surface: #0d1520; --border: #1a2535;
       --accent: #00d4ff; --accent2: #7c3aed; --text: #e8f0ff; --muted: #6b7a99;
     }
     body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
-    main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; position: relative; }
-    .login-header { text-align: center; margin-bottom: 30px; }
+    
+    /* GLOBAL LOADER (The Shield) */
+    #global-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .spinner { border: 4px solid rgba(0, 212, 255, 0.1); border-top: 4px solid var(--accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; }
+    .login-header { text-align: center; margin-bottom: 25px; }
+    .login-header h1 { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; margin-bottom: 8px; }
     .login-header h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .role-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 450px; margin-bottom: 25px; }
-    .role-card { background: var(--surface); border: 2px solid var(--border); border-radius: 20px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; }
-    .role-card.active { border-color: var(--accent); box-shadow: 0 0 20px rgba(0,212,255,0.15); }
-    .selected-badge { position: absolute; top: 10px; right: 10px; background: var(--accent); color: #000; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; opacity: 0; font-weight: bold; }
+    
+    .role-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 400px; margin-bottom: 25px; }
+    .role-card { background: var(--surface); border: 2px solid var(--border); border-radius: 16px; padding: 15px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; }
+    .role-card.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(0,212,255,0.15); }
+    .selected-badge { position: absolute; top: 10px; right: 10px; background: var(--accent); color: #000; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; opacity: 0; font-weight: bold; font-size: 12px; }
     .role-card.active .selected-badge { opacity: 1; }
-    .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 25px; width: 100%; max-width: 450px; }
-    .google-btn { width: 100%; background: #fff; color: #000; padding: 12px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; }
-    .input-field { width: 100%; background: #111827; border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; margin-bottom: 12px; outline: none; }
-    .login-btn { width: 100%; background: linear-gradient(to right, #3B82F6, #8B5CF6); color: white; padding: 13px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
-    .signup-btn { width: 100%; background: transparent; color: #8B5CF6; border: 1px solid #8B5CF6; padding: 12px; border-radius: 12px; margin-top: 10px; cursor: pointer; font-weight: bold; }
+
+    .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 25px; width: 100%; max-width: 400px; }
+    .input-field { width: 100%; background: #111827; border: 1px solid var(--border); border-radius: 12px; padding: 14px; color: white; margin-bottom: 12px; outline: none; font-size: 0.95rem; }
+    .input-field:focus { border-color: var(--accent); }
+    
+    .btn { width: 100%; border: none; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .btn-google { background: #fff; color: #000; margin-bottom: 15px; }
+    .btn-primary { background: linear-gradient(to right, #3B82F6, #8B5CF6); color: white; margin-bottom: 12px; }
+    .btn-outline { background: transparent; color: #8B5CF6; border: 1px solid #8B5CF6; }
+    
     .divider { text-align: center; color: var(--muted); font-size: 13px; margin: 15px 0; }
+    .btn.loading { opacity: 0.6; pointer-events: none; cursor: not-allowed; }
   </style>
 </head>
 <body>
 
+<div id="global-loader">
+  <div class="spinner"></div>
+  <p id="loader-text" style="margin-top: 20px; color: var(--muted); font-weight: 600;">Loading...</p>
+</div>
+
 <main>
   <div class="login-header">
-    <h1>Welcome to <span>HealthChain</span></h1>
-    <p style="color: var(--muted);">Choose your role to continue</p>
+    <h1>Health<span>Chain</span></h1>
+    <p style="color: var(--muted);">Secure your medical records</p>
   </div>
 
   <div class="role-cards">
     <div class="role-card active" id="patient-card" onclick="selectRole('patient')">
       <div class="selected-badge">✓</div>
-      <span style="font-size: 2rem;">👤</span>
-      <div style="font-weight: bold;">Patient</div>
+      <span style="font-size: 1.8rem;">👤</span>
+      <div style="font-weight: bold; margin-top:5px;">Patient</div>
     </div>
     <div class="role-card" id="doctor-card" onclick="selectRole('doctor')">
       <div class="selected-badge">✓</div>
-      <span style="font-size: 2rem;">👨‍⚕️</span>
-      <div style="font-weight: bold;">Doctor</div>
+      <span style="font-size: 1.8rem;">👨‍⚕️</span>
+      <div style="font-weight: bold; margin-top:5px;">Doctor</div>
     </div>
   </div>
 
   <div class="login-box">
-    <h3 id="login-title" style="margin-bottom: 15px; color: var(--muted);">Login as a Patient</h3>
+    <h3 id="login-title" style="margin-bottom: 15px; color: var(--muted); font-family: 'Syne';">Login as a Patient</h3>
     
-    <button class="google-btn" onclick="handleGoogleLogin()">
-      <img src="https://www.google.com/favicon.ico" width="18"> Continue with Google
+    <button id="googleBtn" class="btn btn-google" onclick="handleGoogleLogin()">
+      <img src="https://www.google.com/favicon.ico" width="18" alt="Google"> Continue with Google
     </button>
 
     <div class="divider">or login with email</div>
@@ -67,16 +85,13 @@
     <input type="email" id="email" class="input-field" placeholder="Email Address">
     <input type="password" id="password" class="input-field" placeholder="Password">
     
-    <button class="login-btn" onclick="handleEmailLogin()">Login</button>
-    <button class="signup-btn" onclick="handleSignUp()">Create Account</button>
-
-    <div class="divider">or</div>
-    <button onclick="window.location.href='patient.html'" style="width:100%; background:none; border:1px solid var(--border); color:var(--muted); padding:10px; border-radius:12px; cursor:pointer;">🎮 Try Demo Mode</button>
+    <button id="loginBtn" class="btn btn-primary" onclick="handleEmailLogin()">Login</button>
+    <button id="signupBtn" class="btn btn-outline" onclick="handleSignUp()">Create Account</button>
   </div>
 </main>
 
 <script>
-  // 1. Firebase Config (Keys Added)
+  // 1. FIREBASE SETUP
   const firebaseConfig = {
     apiKey: "AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",
     authDomain: "helthchain.firebaseapp.com",
@@ -86,74 +101,117 @@
     appId: "1:682542534348:web:bedb3583d7d2eb49a57c69"
   };
 
-  firebase.initializeApp(firebaseConfig);
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  let selectedRole = 'patient';
+  // 2. UI & ROLE SETUP
+  const globalLoader = document.getElementById('global-loader');
+  let selectedRole = localStorage.getItem('selectedRole') || 'patient';
+  selectRole(selectedRole); 
 
   function selectRole(role) {
     selectedRole = role;
+    localStorage.setItem('selectedRole', role);
     document.getElementById('patient-card').classList.toggle('active', role === 'patient');
     document.getElementById('doctor-card').classList.toggle('active', role === 'doctor');
     document.getElementById('login-title').textContent = `Login as a ${role.charAt(0).toUpperCase() + role.slice(1)}`;
   }
 
-  // 2. Google Login + Database Save
-  function handleGoogleLogin() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider)
-      .then((result) => {
-        const user = result.user;
-        // Database me role save karo
-        return db.collection("users").doc(user.uid).set({
-          uid: user.uid,
-          email: user.email,
-          name: user.displayName,
-          role: selectedRole,
-          lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      })
-      .then(() => {
-        window.location.href = selectedRole === 'patient' ? 'patient.html' : 'doctor.html';
-      })
-      .catch(err => alert("Google Error: " + err.message));
+  function setBtnLoading(btnId, isLoading, text) {
+    const btn = document.getElementById(btnId);
+    if(isLoading) { btn.classList.add('loading'); btn.innerHTML = `⏳ Loading...`; }
+    else { btn.classList.remove('loading'); btn.innerHTML = text; }
   }
 
-  // 3. Email Signup + Database Save
-  function handleSignUp() {
-    const email = document.getElementById('email').value;
-    const pass = document.getElementById('password').value;
-    if(!email || !pass) return alert("Email aur Password bhariye!");
+  // 3. SUPERFAST BRAHMASTRA LOGIC
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      // User is already logged in -> Go to Dashboard immediately!
+      window.location.replace(selectedRole === 'patient' ? 'patient.html' : 'doctor.html');
+    } else {
+      // ONLY check Google Redirect if the user ACTUALLY clicked the Google button
+      if (sessionStorage.getItem('googleLoginPending')) {
+        auth.getRedirectResult().then((result) => {
+          sessionStorage.removeItem('googleLoginPending');
+          if (result.credential) {
+            const u = result.user;
+            db.collection("users").doc(u.uid).set({
+              uid: u.uid, email: u.email, name: u.displayName || "User", role: selectedRole,
+              lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true }).then(() => {
+              window.location.replace(selectedRole === 'patient' ? 'patient.html' : 'doctor.html');
+            });
+          } else {
+            globalLoader.style.display = 'none';
+          }
+        }).catch((err) => {
+          sessionStorage.removeItem('googleLoginPending');
+          globalLoader.style.display = 'none';
+          alert("Google Error: " + err.message);
+        });
+      } else {
+        // NORMAL LOAD: INSTANTLY HIDE LOADER
+        globalLoader.style.display = 'none';
+      }
+    }
+  });
 
+  // 4. GOOGLE LOGIN
+  function handleGoogleLogin() {
+    globalLoader.style.display = 'flex';
+    document.getElementById('loader-text').textContent = "Connecting to Google...";
+    
+    // YE HAI MAGIC TRICK! System ko pata chal jayega ki ab check karna hai
+    sessionStorage.setItem('googleLoginPending', 'true'); 
+    
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithRedirect(provider);
+  }
+
+  // 5. EMAIL SIGNUP
+  function handleSignUp() {
+    const email = document.getElementById('email').value.trim();
+    const pass = document.getElementById('password').value.trim();
+    if(!email || !pass) return alert("Email and Password are required!");
+
+    setBtnLoading('signupBtn', true, ''); 
     auth.createUserWithEmailAndPassword(email, pass)
-      .then((userCredential) => {
-        const user = userCredential.user;
-        return db.collection("users").doc(user.uid).set({
-          uid: user.uid,
-          email: email,
-          role: selectedRole,
+      .then((userCred) => {
+        return db.collection("users").doc(userCred.user.uid).set({
+          uid: userCred.user.uid, email: email, role: selectedRole,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       })
       .then(() => {
-        alert("🎉 Account Created & Saved to Database!");
-        window.location.href = selectedRole === 'patient' ? 'patient.html' : 'doctor.html';
+         // Auto-redirect happens via onAuthStateChanged
       })
-      .catch(err => alert("Signup Error: " + err.message));
+      .catch(err => {
+        setBtnLoading('signupBtn', false, 'Create Account');
+        if(err.code === 'auth/email-already-in-use') alert("Account exists! Click 'Login' instead.");
+        else if(err.code === 'auth/weak-password') alert("Password is too weak (min 6 chars).");
+        else alert("Error: " + err.message);
+      });
   }
 
-  // 4. Email Login
+  // 6. EMAIL LOGIN
   function handleEmailLogin() {
-    const email = document.getElementById('email').value;
-    const pass = document.getElementById('password').value;
+    const email = document.getElementById('email').value.trim();
+    const pass = document.getElementById('password').value.trim();
+    if(!email || !pass) return alert("Email and Password are required!");
+
+    setBtnLoading('loginBtn', true, ''); 
     auth.signInWithEmailAndPassword(email, pass)
-      .then(() => {
-        window.location.href = selectedRole === 'patient' ? 'patient.html' : 'doctor.html';
-      })
-      .catch(err => alert("Login Error: " + err.message));
+      .catch(err => {
+        setBtnLoading('loginBtn', false, 'Login');
+        if(err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-login-credentials') {
+          alert("Invalid Credentials! Have you created an account?");
+        } else {
+          alert("Error: " + err.message);
+        }
+      });
   }
+
 </script>
 </body>
-
 </html>

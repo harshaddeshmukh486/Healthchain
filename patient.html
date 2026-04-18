@@ -71,7 +71,6 @@
     .input-field { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 15px; color: white; outline: none; font-family: inherit; }
     .input-field:focus { border-color: var(--accent); }
     
-    
     /* Reports List */
     .report-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
     .report-card:hover { border-color: var(--accent); }
@@ -83,7 +82,6 @@
     
     .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
     .empty-state i { font-size: 3rem; margin-bottom: 15px; opacity: 0.5; }
-    
 
     /* Doctor Access List */
     .doctor-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface2); border-radius: 10px; margin-bottom: 10px; }
@@ -217,23 +215,16 @@
 
   let currentUser = null;
 
-  // 2. Auth Check (The Shield)
+  // 2. Auth Check (The Shield) - SUPERFAST BYPASS
   auth.onAuthStateChanged((user) => {
     if (user) {
-      // Check if user is actually a patient
-      db.collection("users").doc(user.uid).get().then((doc) => {
-        if(doc.exists && doc.data().role === 'patient') {
-          currentUser = user;
-          document.getElementById('global-loader').style.display = 'none';
-          document.getElementById('display-name').textContent = user.displayName || user.email.split('@')[0];
-          document.getElementById('welcome-name').textContent = user.displayName || user.email.split('@')[0];
-          loadReports();
-          loadDoctors();
-        } else {
-          alert("Unauthorized Access. You are not registered as a Patient.");
-          auth.signOut().then(() => window.location.replace('login.html'));
-        }
-      });
+      // User is logged in, hide loader immediately without checking Firestore!
+      currentUser = user;
+      document.getElementById('global-loader').style.display = 'none';
+      document.getElementById('display-name').textContent = user.displayName || user.email.split('@')[0];
+      document.getElementById('welcome-name').textContent = user.displayName || user.email.split('@')[0];
+      loadReports();
+      loadDoctors();
     } else {
       window.location.replace('login.html');
     }
@@ -386,5 +377,4 @@
   }
 </script>
 </body>
-
 </html>

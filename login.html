@@ -18,7 +18,6 @@
     }
     body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
     
-    /* GLOBAL LOADER */
     #global-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .spinner { border: 4px solid rgba(0, 212, 255, 0.1); border-top: 4px solid var(--accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -44,14 +43,13 @@
     .btn-outline { background: transparent; color: #8B5CF6; border: 1px solid #8B5CF6; }
     
     .divider { text-align: center; color: var(--muted); font-size: 13px; margin: 15px 0; }
-    .btn.loading { opacity: 0.6; pointer-events: none; cursor: not-allowed; }
   </style>
 </head>
 <body>
 
 <div id="global-loader">
   <div class="spinner"></div>
-  <p id="loader-text" style="margin-top: 20px; color: var(--muted); font-weight: 600;">Loading...</p>
+  <p id="loader-text" style="margin-top: 20px; color: var(--muted); font-weight: 600;">Verifying...</p>
 </div>
 
 <main>
@@ -76,7 +74,7 @@
   <div class="login-box">
     <h3 id="login-title" style="margin-bottom: 15px; color: var(--muted); font-family: 'Syne';">Login as a Patient</h3>
     
-    <button id="googleBtn" class="btn btn-google" onclick="handleGoogleLogin()">
+    <button class="btn btn-google" onclick="handleGoogleLogin()">
       <img src="https://www.google.com/favicon.ico" width="18" alt="Google"> Continue with Google
     </button>
 
@@ -91,7 +89,6 @@
 </main>
 
 <script>
-  // 1. FIREBASE SETUP
   const firebaseConfig = {
     apiKey: "AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",
     authDomain: "helthchain.firebaseapp.com",
@@ -105,7 +102,6 @@
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  // 2. UI & ROLE SETUP
   const globalLoader = document.getElementById('global-loader');
   let selectedRole = localStorage.getItem('selectedRole') || 'patient';
   selectRole(selectedRole); 
@@ -118,28 +114,9 @@
     document.getElementById('login-title').textContent = `Login as a ${role.charAt(0).toUpperCase() + role.slice(1)}`;
   }
 
-  function setBtnLoading(btnId, isLoading, text) {
-    const btn = document.getElementById(btnId);
-    if(isLoading) { btn.classList.add('loading'); btn.innerHTML = `⏳ Loading...`; }
-    else { btn.classList.remove('loading'); btn.innerHTML = text; }
-  }
-
-  // 3. CLEAN AUTH CHECK (If already logged in, skip login page)
-  auth.onAuthStateChanged((user) => {
-    if (user) {
-      window.location.replace(selectedRole === 'patient' ? 'patient.html' : 'doctor.html');
-    } else {
-      globalLoader.style.display = 'none';
-    }
-  });
-
-  // 4. GOOGLE LOGIN (FIXED: Mobile Popup)
-  function handleGoogleLogin() {
-    globalLoader.style.display = 'flex';
-    document.getElementById('loader-text').textContent = "Connecting to Google...";
-    
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).then((result) => {
+  // 1. CATCH REDIRECT (Ye white page wali loading handle karega)
+  auth.getRedirectResult().then((result) => {
+    if (result.user) {
       const u = result.user;
       db.collection("users").doc(u.uid).set({
         uid: u.uid, email: u.email, name: u.displayName || "User", role: selectedRole,
@@ -147,50 +124,42 @@
       }, { merge: true }).then(() => {
         window.location.replace(selectedRole === 'patient' ? 'patient.html' : 'doctor.html');
       });
-    }).catch((err) => {
-      globalLoader.style.display = 'none';
-      alert("Google Error: " + err.message);
-    });
+    }
+  }).catch((err) => {
+    globalLoader.style.display = 'none';
+  });
+
+  // 2. CHECK LOGIN STATUS
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      window.location.replace(selectedRole === 'patient' ? 'patient.html' : 'doctor.html');
+    } else {
+      setTimeout(() => { globalLoader.style.display = 'none'; }, 500);
+    }
+  });
+
+  // 3. START GOOGLE LOGIN (Mobile ke liye sabse safe tarika)
+  function handleGoogleLogin() {
+    globalLoader.style.display = 'flex';
+    document.getElementById('loader-text').textContent = "Google se jhud raha hai...";
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithRedirect(provider);
   }
 
-  // 5. EMAIL SIGNUP
   function handleSignUp() {
     const email = document.getElementById('email').value.trim();
     const pass = document.getElementById('password').value.trim();
-    if(!email || !pass) return alert("Email and Password are required!");
-
-    setBtnLoading('signupBtn', true, ''); 
-    auth.createUserWithEmailAndPassword(email, pass)
-      .then((userCred) => {
-        return db.collection("users").doc(userCred.user.uid).set({
-          uid: userCred.user.uid, email: email, role: selectedRole,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      })
-      .catch(err => {
-        setBtnLoading('signupBtn', false, 'Create Account');
-        if(err.code === 'auth/email-already-in-use') alert("Account exists! Click 'Login' instead.");
-        else if(err.code === 'auth/weak-password') alert("Password is too weak (min 6 chars).");
-        else alert("Error: " + err.message);
-      });
+    if(!email || !pass) return alert("Email aur Password daalein!");
+    auth.createUserWithEmailAndPassword(email, pass).then((userCred) => {
+      db.collection("users").doc(userCred.user.uid).set({ uid: userCred.user.uid, email: email, role: selectedRole });
+    }).catch(err => alert("Error: " + err.message));
   }
 
-  // 6. EMAIL LOGIN
   function handleEmailLogin() {
     const email = document.getElementById('email').value.trim();
     const pass = document.getElementById('password').value.trim();
-    if(!email || !pass) return alert("Email and Password are required!");
-
-    setBtnLoading('loginBtn', true, ''); 
-    auth.signInWithEmailAndPassword(email, pass)
-      .catch(err => {
-        setBtnLoading('loginBtn', false, 'Login');
-        if(err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-login-credentials') {
-          alert("Invalid Credentials! Have you created an account?");
-        } else {
-          alert("Error: " + err.message);
-        }
-      });
+    if(!email || !pass) return alert("Email aur Password daalein!");
+    auth.signInWithEmailAndPassword(email, pass).catch(err => alert("Error: " + err.message));
   }
 </script>
 </body>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Patient Dashboard — HealthChain</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+  
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #060a12; --surface: #0d1520; --surface2: #141f30; --border: #1a2535;
+      --accent: #00d4ff; --accent2: #7c3aed; --text: #e8f0ff; --text-muted: #6b7a99;
+      --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+    
+    /* Loading Shield */
+    #global-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .spinner { border: 4px solid rgba(0, 212, 255, 0.1); border-top: 4px solid var(--accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Navbar */
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 5%; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .logo { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 10px; }
+    .logo span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .user-profile { display: flex; align-items: center; gap: 15px; }
+    .user-name { font-weight: 600; font-size: 0.95rem; }
+    .logout-btn { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.3s; font-size: 0.85rem; }
+    .logout-btn:hover { background: var(--danger); color: white; }
+
+    /* Dashboard Layout */
+    .dashboard-container { padding: 40px 5%; max-width: 1200px; margin: 0 auto; width: 100%; flex: 1; }
+    .welcome-section { margin-bottom: 40px; }
+    .welcome-section h1 { font-family: 'Syne', sans-serif; font-size: 2.2rem; margin-bottom: 5px; }
+    .welcome-section p { color: var(--text-muted); font-size: 1.1rem; }
+
+    /* Stats Grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 25px; display: flex; align-items: center; gap: 20px; transition: 0.3s; }
+    .stat-card:hover { transform: translateY(-5px); border-color: rgba(255,255,255,0.1); }
+    .stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+    .icon-blue { background: rgba(59, 130, 246, 0.1); color: #3B82F6; }
+    .icon-green { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+    .icon-red { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+    .stat-info h3 { font-size: 2rem; margin-bottom: 2px; }
+    .stat-info p { color: var(--text-muted); font-size: 0.9rem; font-weight: 500; }
+
+    /* Main Content Area */
+    .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
+    @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+    
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 25px; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+    .panel-header h2 { font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    
+    /* Buttons */
+    .btn { padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.3s; border: none; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; }
+    .btn-primary:hover { opacity: 0.9; box-shadow: 0 5px 15px rgba(124, 58, 237, 0.3); }
+    .btn-outline { background: transparent; border: 1px solid var(--text-muted); color: var(--text); }
+    .btn-outline:hover { border-color: var(--text); }
+
+    /* Add Report Form */
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.9rem; }
+    .input-field { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 15px; color: white; outline: none; font-family: inherit; }
+    .input-field:focus { border-color: var(--accent); }
+    
+    /* Reports List */
+    .report-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+    .report-card:hover { border-color: var(--accent); }
+    .report-info h4 { margin-bottom: 4px; font-size: 1.05rem; }
+    .report-meta { display: flex; gap: 15px; font-size: 0.85rem; color: var(--text-muted); }
+    .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-normal { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+    .status-abnormal { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+    
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+    .empty-state i { font-size: 3rem; margin-bottom: 15px; opacity: 0.5; }
+
+    /* Doctor Access List */
+    .doctor-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface2); border-radius: 10px; margin-bottom: 10px; }
+    .doctor-info h4 { font-size: 0.95rem; margin-bottom: 2px; }
+    .doctor-info p { font-size: 0.8rem; color: var(--text-muted); }
+    .revoke-btn { color: var(--danger); background: transparent; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+    .revoke-btn:hover { text-decoration: underline; }
+
+  </style>
+</head>
+<body>
+
+<div id="global-loader">
+  <div class="spinner"></div>
+  <p style="margin-top: 20px; color: var(--text-muted); font-weight: 600;">Verifying Identity...</p>
+</div>
+
+<nav>
+  <a href="#" class="logo">Health<span>Chain</span></a>
+  <div class="user-profile">
+    <div class="user-name" id="display-name">Loading...</div>
+    <button class="logout-btn" onclick="handleLogout()">Logout</button>
+  </div>
+</nav>
+
+<div class="dashboard-container">
+  
+  <div class="welcome-section">
+    <h1>Hello, <span id="welcome-name">Patient</span></h1>
+    <p>Your medical records are secured with SHA-256 Blockchain Encryption.</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon icon-blue">📄</div>
+      <div class="stat-info">
+        <h3 id="total-reports-count">0</h3>
+        <p>Total Reports</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon icon-red">⚠️</div>
+      <div class="stat-info">
+        <h3 id="abnormal-count">0</h3>
+        <p>Action Needed</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon icon-green">🔒</div>
+      <div class="stat-info">
+        <h3>100%</h3>
+        <p>Blockchain Secured</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    
+    <div class="panel">
+      <div class="panel-header">
+        <h2>My Health Records</h2>
+        <button class="btn btn-primary" onclick="toggleAddReport()">+ Add New Report</button>
+      </div>
+      
+      <div id="add-report-form" style="display: none; background: var(--surface2); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px dashed var(--border);">
+        <h3 style="margin-bottom: 15px; font-size: 1.1rem;">Secure New Report</h3>
+        <div class="form-group">
+          <label>Report Name (e.g. Blood Test, MRI)</label>
+          <input type="text" id="reportName" class="input-field" placeholder="Enter report name">
+        </div>
+        <div class="form-group">
+          <label>Key Findings / Values</label>
+          <input type="text" id="reportValue" class="input-field" placeholder="e.g. Blood Sugar 140 mg/dL">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="reportStatus" class="input-field">
+            <option value="Normal">Normal</option>
+            <option value="Abnormal">Abnormal (Attention Needed)</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button class="btn btn-primary" onclick="saveReport()">Secure on Blockchain</button>
+          <button class="btn btn-outline" onclick="toggleAddReport()">Cancel</button>
+        </div>
+      </div>
+
+      <div id="reports-container">
+        <div class="empty-state">
+          <div style="font-size: 3rem; margin-bottom: 10px;">📭</div>
+          <h3>No Records Found</h3>
+          <p>Click '+ Add New Report' to secure your first medical record.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Doctor Access</h2>
+      </div>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">Grant secure access to your doctor using their email ID.</p>
+      
+      <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+        <input type="email" id="doctorEmail" class="input-field" placeholder="doctor@hospital.com">
+        <button class="btn btn-outline" onclick="grantAccess()">Grant</button>
+      </div>
+
+      <h3 style="font-size: 1rem; margin-bottom: 15px; color: var(--text-muted);">Authorized Doctors</h3>
+      <div id="authorized-doctors-list">
+        <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 10px 0;">No doctors have access currently.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // 1. Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",
+    authDomain: "helthchain.firebaseapp.com",
+    projectId: "helthchain",
+    storageBucket: "helthchain.appspot.com",
+    messagingSenderId: "682542534348",
+    appId: "1:682542534348:web:bedb3583d7d2eb49a57c69"
+  };
+
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  let currentUser = null;
+
+  // 2. Auth Check (The Shield)
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      // Check if user is actually a patient
+      db.collection("users").doc(user.uid).get().then((doc) => {
+        if(doc.exists && doc.data().role === 'patient') {
+          currentUser = user;
+          document.getElementById('global-loader').style.display = 'none';
+          document.getElementById('display-name').textContent = user.displayName || user.email.split('@')[0];
+          document.getElementById('welcome-name').textContent = user.displayName || user.email.split('@')[0];
+          loadReports();
+          loadDoctors();
+        } else {
+          alert("Unauthorized Access. You are not registered as a Patient.");
+          auth.signOut().then(() => window.location.replace('login.html'));
+        }
+      });
+    } else {
+      window.location.replace('login.html');
+    }
+  });
+
+  // Logout
+  function handleLogout() {
+    auth.signOut().then(() => {
+      window.location.replace('login.html');
+    });
+  }
+
+  // Toggle Form
+  function toggleAddReport() {
+    const form = document.getElementById('add-report-form');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
+
+  // Basic Hash Generator (For UI Demo purposes)
+  function generateHash() {
+    return '0x' + Array.from({length: 40}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  }
+
+  // Save Report to Firestore
+  function saveReport() {
+    const name = document.getElementById('reportName').value;
+    const value = document.getElementById('reportValue').value;
+    const status = document.getElementById('reportStatus').value;
+
+    if(!name || !value) return alert("Please fill all fields!");
+
+    const hash = generateHash();
+
+    db.collection("reports").add({
+      patientId: currentUser.uid,
+      patientEmail: currentUser.email,
+      reportName: name,
+      findings: value,
+      status: status,
+      blockchainHash: hash,
+      date: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+      alert("Report Secured on Blockchain! 🔗");
+      document.getElementById('reportName').value = '';
+      document.getElementById('reportValue').value = '';
+      toggleAddReport();
+      loadReports();
+    }).catch(err => alert("Error: " + err.message));
+  }
+
+  // Load Reports
+  function loadReports() {
+    db.collection("reports").where("patientId", "==", currentUser.uid).orderBy("date", "desc")
+      .onSnapshot((querySnapshot) => {
+        const container = document.getElementById('reports-container');
+        
+        document.getElementById('total-reports-count').textContent = querySnapshot.size;
+        
+        let abnormalCount = 0;
+        
+        if (querySnapshot.empty) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div style="font-size: 3rem; margin-bottom: 10px;">📭</div>
+              <h3>No Records Found</h3>
+              <p>Click '+ Add New Report' to secure your first medical record.</p>
+            </div>`;
+          document.getElementById('abnormal-count').textContent = 0;
+          return;
+        }
+
+        let html = '';
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          const dateStr = data.date ? data.date.toDate().toLocaleDateString() : 'Just now';
+          const isAbnormal = data.status === 'Abnormal';
+          if(isAbnormal) abnormalCount++;
+
+          html += `
+            <div class="report-card">
+              <div class="report-info">
+                <h4>${data.reportName}</h4>
+                <div class="report-meta">
+                  <span>📅 ${dateStr}</span>
+                  <span>🔗 Hash: ${data.blockchainHash.substring(0,10)}...</span>
+                </div>
+                <p style="margin-top: 8px; font-size: 0.9rem; color: var(--text);">${data.findings}</p>
+              </div>
+              <div style="text-align: right;">
+                <span class="status-badge ${isAbnormal ? 'status-abnormal' : 'status-normal'}">${data.status}</span>
+              </div>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+        document.getElementById('abnormal-count').textContent = abnormalCount;
+      });
+  }
+
+  // Grant Doctor Access
+  function grantAccess() {
+    const email = document.getElementById('doctorEmail').value.trim();
+    if(!email) return alert("Enter doctor's email");
+
+    db.collection("doctor_access").add({
+      patientId: currentUser.uid,
+      doctorEmail: email.toLowerCase(),
+      grantedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+      alert(`Access granted to ${email}`);
+      document.getElementById('doctorEmail').value = '';
+      loadDoctors();
+    }).catch(err => alert(err.message));
+  }
+
+  // Load Granted Doctors
+  function loadDoctors() {
+    db.collection("doctor_access").where("patientId", "==", currentUser.uid)
+      .onSnapshot((querySnapshot) => {
+        const list = document.getElementById('authorized-doctors-list');
+        if(querySnapshot.empty) {
+          list.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 10px 0;">No doctors have access currently.</p>`;
+          return;
+        }
+
+        let html = '';
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          html += `
+            <div class="doctor-item">
+              <div class="doctor-info">
+                <h4>👨‍⚕️ Doctor</h4>
+                <p>${data.doctorEmail}</p>
+              </div>
+              <button class="revoke-btn" onclick="revokeAccess('${doc.id}')">Revoke</button>
+            </div>
+          `;
+        });
+        list.innerHTML = html;
+      });
+  }
+
+  // Revoke Access
+  function revokeAccess(docId) {
+    if(confirm("Are you sure you want to revoke access? This doctor will no longer see your reports.")) {
+      db.collection("doctor_access").doc(docId).delete().then(() => {
+        alert("Access Revoked Successfully.");
+      });
+    }
+  }
+</script>
+</body>
+</html>

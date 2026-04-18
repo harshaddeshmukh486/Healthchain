@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HealthChain — Doctor Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #060a12; --surface: #0d1520; --border: #1a2535;
+      --accent: #00d4ff; --accent2: #7c3aed; --green: #00e676;
+      --red: #ff5252; --yellow: #ffc107;
+      --text: #e8f0ff; --muted: #6b7a99;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+    /* Navbar */
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; background: rgba(6,10,18,0.95); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .logo { display: flex; align-items: center; gap: 8px; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: var(--text); text-decoration: none; }
+    .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+    .user-badge { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 50px; padding: 6px 14px; font-size: 0.85rem; }
+    .logout-btn { color: var(--red); background: rgba(255, 82, 82, 0.1); border: 1px solid rgba(255, 82, 82, 0.3); padding: 5px 12px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: 0.3s; margin-left: 5px; }
+    
+    .container { max-width: 900px; margin: 0 auto; padding: 24px 20px 100px; }
+
+    .welcome { margin-bottom: 28px; }
+    .welcome h1 { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .welcome h1 span { background: linear-gradient(135deg, #00e676, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .welcome p { color: var(--muted); font-size: 0.9rem; }
+
+    /* Search & Scan Actions */
+    .search-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 28px; }
+    .search-row { display: flex; gap: 10px; margin-bottom: 15px; }
+    .input-field { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; flex: 1; outline: none; }
+    .input-field:focus { border-color: var(--accent); }
+    .search-btn { background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 12px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+    .search-btn:hover { border-color: var(--accent); color: var(--accent); }
+    
+    .scan-btn { width: 100%; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; padding: 14px; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 5px 15px rgba(0,212,255,0.2); transition: 0.3s; }
+    .scan-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,212,255,0.4); }
+
+    /* Scanner Modal */
+    #scanner-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+    #reader { width: 100%; max-width: 400px; background: #fff; border-radius: 15px; overflow: hidden; }
+    .close-scan-btn { margin-top: 20px; background: var(--red); color: white; border: none; padding: 10px 25px; border-radius: 50px; font-weight: bold; cursor: pointer; }
+
+    /* Dynamic Patient Section */
+    #patient-section { display: none; animation: fadeUp 0.5s ease; }
+    .patient-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 24px; }
+    .patient-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .patient-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.2rem; margin-bottom: 5px; }
+    .patient-email { font-size: 0.85rem; color: var(--muted); }
+    
+    .report-item { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; }
+    .report-title { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 600; font-size: 1.05rem; }
+    .report-value { color: var(--text); font-size: 0.95rem; margin-bottom: 8px; }
+    .report-hash { font-size: 0.75rem; color: var(--muted); word-break: break-all; }
+    
+    .status-normal { color: var(--green); background: rgba(0, 230, 118, 0.1); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; }
+    .status-abnormal { color: var(--red); background: rgba(255, 82, 82, 0.1); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; }
+
+    .ai-btn { width: 100%; background: rgba(124,58,237,0.1); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+    .ai-btn:hover { background: rgba(124,58,237,0.2); }
+
+    /* Bottom Nav */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(6,10,18,0.95); backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 16px; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--muted); font-size: 0.7rem; transition: color 0.2s; padding: 4px 16px; }
+    .nav-item.active { color: var(--accent); }
+    .nav-icon { font-size: 1.3rem; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 768px) {
+      .welcome h1 { font-size: 1.4rem; }
+      .search-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo"><div class="logo-icon">⛓</div>HealthChain</a>
+  <div style="display:flex;align-items:center;">
+    <div class="user-badge" id="doc-badge">Loading...</div>
+    <button onclick="handleLogout()" class="logout-btn">Logout</button>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="welcome">
+    <h1>Doctor <span>Dashboard</span> 👨‍⚕️</h1>
+    <p>Scan QR code or enter Patient Email to view secure records.</p>
+  </div>
+
+  <div class="search-card">
+    <button class="scan-btn" onclick="startScanner()">📷 Scan Patient QR Code</button>
+    <div style="text-align:center; margin: 15px 0; color: var(--muted); font-size: 0.85rem;">— OR —</div>
+    <div class="search-row">
+      <input type="email" class="input-field" id="search-input" placeholder="Enter patient email manually..."/>
+      <button class="search-btn" onclick="manualSearch()">Search</button>
+    </div>
+  </div>
+
+  <div id="patient-section">
+    <div class="patient-card">
+      <div class="patient-header">
+        <div>
+          <div class="patient-name">Patient Records</div>
+          <div class="patient-email" id="display-patient-email">Fetching data...</div>
+        </div>
+        <div style="font-size: 1.5rem;">👤</div>
+      </div>
+      
+      <h3 style="font-size: 1rem; margin-bottom: 15px; color: var(--muted);">Secured Medical History</h3>
+      <div id="reports-container">
+        </div>
+      
+      <button class="ai-btn" onclick="alert('AI Agent is analyzing these records. Coming in next update!')">✨ Generate AI Health Brief</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="scanner-modal">
+  <h3 style="color:white; margin-bottom: 15px; font-family: 'Syne';">Scan Patient QR</h3>
+  <div id="reader"></div>
+  <button class="close-scan-btn" onclick="stopScanner()">Cancel Scan</button>
+</div>
+
+<div class="bottom-nav">
+  <a href="patient.html" class="nav-item"><span class="nav-icon">🏠</span><span>Patient</span></a>
+  <a href="doctor.html" class="nav-item active"><span class="nav-icon">👨‍⚕️</span><span>Doctor</span></a>
+</div>
+
+<script>
+  // 1. FIREBASE SETUP
+  const firebaseConfig = {
+    apiKey: "AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",
+    authDomain: "helthchain.firebaseapp.com",
+    projectId: "helthchain",
+    storageBucket: "helthchain.appspot.com",
+    messagingSenderId: "682542534348",
+    appId: "1:682542534348:web:bedb3583d7d2eb49a57c69"
+  };
+
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // 2. AUTHENTICATION CHECK
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      document.getElementById('doc-badge').innerHTML = `<span>Dr. ${user.displayName || user.email.split('@')[0]}</span>`;
+    } else {
+      window.location.replace('login.html');
+    }
+  });
+
+  function handleLogout() {
+    auth.signOut().then(() => window.location.replace('login.html'));
+  }
+
+  // 3. QR SCANNER LOGIC (The Brahmastra)
+  let html5QrcodeScanner;
+
+  function startScanner() {
+    document.getElementById('scanner-modal').style.display = 'flex';
+    // Initialize Scanner
+    html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false
+    );
+    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+  }
+
+  function onScanSuccess(decodedText) {
+    stopScanner();
+    // Assuming QR contains the patient's email
+    fetchPatientData(decodedText.trim().toLowerCase());
+  }
+
+  function onScanFailure(error) {
+    // Keep scanning quietly
+  }
+
+  function stopScanner() {
+    if (html5QrcodeScanner) {
+      html5QrcodeScanner.clear();
+    }
+    document.getElementById('scanner-modal').style.display = 'none';
+  }
+
+  // 4. MANUAL SEARCH LOGIC
+  function manualSearch() {
+    const email = document.getElementById('search-input').value.trim().toLowerCase();
+    if (!email) return alert("Please enter an email address!");
+    fetchPatientData(email);
+  }
+
+  // 5. FETCH DATA FROM FIREBASE (BACKEND)
+  function fetchPatientData(patientEmail) {
+    const section = document.getElementById('patient-section');
+    const container = document.getElementById('reports-container');
+    const emailDisplay = document.getElementById('display-patient-email');
+    
+    section.style.display = 'block';
+    emailDisplay.textContent = `Email: ${patientEmail}`;
+    container.innerHTML = `<p style="text-align:center; padding: 20px; color: var(--accent);">Fetching secure records from Blockchain...</p>`;
+    section.scrollIntoView({ behavior: 'smooth' });
+
+    // Fetch reports where patientEmail matches the scanned/typed email
+    db.collection("reports").where("patientEmail", "==", patientEmail).orderBy("date", "desc")
+      .get()
+      .then((querySnapshot) => {
+        if (querySnapshot.empty) {
+          container.innerHTML = `<div style="text-align:center; padding: 30px; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted);">
+            <div style="font-size: 2rem; margin-bottom: 10px;">📭</div>
+            No medical records found for this patient.<br><small>Either the email is wrong or they haven't uploaded any reports.</small>
+          </div>`;
+          return;
+        }
+
+        let html = '';
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          const isAbnormal = data.status === 'Abnormal';
+          const badgeClass = isAbnormal ? 'status-abnormal' : 'status-normal';
+          
+          html += `
+            <div class="report-item">
+              <div class="report-title">
+                <span>${data.reportName}</span>
+                <span class="${badgeClass}">${data.status}</span>
+              </div>
+              <div class="report-value"><strong>Findings:</strong> ${data.findings}</div>
+              <div class="report-hash">🔗 SHA-256 Hash: <br/>${data.blockchainHash}</div>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+      })
+      .catch((error) => {
+        container.innerHTML = `<p style="color:var(--red); text-align:center;">Error fetching records: ${error.message}</p>`;
+      });
+  }
+</script>
+
+</body>
+</html>

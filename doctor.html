@@ -49,19 +49,10 @@
     .scan-btn { width: 100%; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; padding: 14px; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 5px 15px rgba(0,212,255,0.2); transition: 0.3s; }
     .scan-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,212,255,0.4); }
 
-    /* NEW: PRO CYBERPUNK SCANNER MODAL */
-    #scanner-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(6, 10, 18, 0.95); backdrop-filter: blur(15px); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-    
-    #reader { width: 100%; max-width: 350px; background: transparent; border: 2px solid var(--accent); border-radius: 20px; overflow: hidden; position: relative; box-shadow: 0 0 40px rgba(0, 212, 255, 0.2); }
-    
-    /* The Laser Scanning Line Effect */
-    #reader::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: var(--green); box-shadow: 0 0 15px var(--green); animation: scanLine 2s infinite linear; z-index: 10; }
-    @keyframes scanLine { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
-    
-    #reader video { object-fit: cover; border-radius: 18px; width: 100%; }
-    
-    .close-scan-btn { margin-top: 30px; background: transparent; color: var(--red); border: 2px solid var(--red); padding: 12px 35px; border-radius: 50px; font-family: 'Syne', sans-serif; font-weight: 800; cursor: pointer; transition: 0.3s; letter-spacing: 1px; }
-    .close-scan-btn:hover { background: var(--red); color: white; box-shadow: 0 0 20px rgba(255, 82, 82, 0.4); }
+    /* Scanner Modal */
+    #scanner-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+    #reader { width: 100%; max-width: 400px; background: #fff; border-radius: 15px; overflow: hidden; }
+    .close-scan-btn { margin-top: 20px; background: var(--red); color: white; border: none; padding: 10px 25px; border-radius: 50px; font-weight: bold; cursor: pointer; }
 
     /* Patient Card */
     .patient-card { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 24px; animation: fadeUp 0.5s ease; }
@@ -165,9 +156,9 @@
 </div>
 
 <div id="scanner-modal">
-  <h3 style="color:white; margin-bottom: 20px; font-family: 'Syne'; font-size: 1.5rem; letter-spacing: 1px;">ALIGN QR IN FRAME</h3>
+  <h3 style="color:white; margin-bottom: 15px; font-family: 'Syne';">Scan Patient QR</h3>
   <div id="reader"></div>
-  <button class="close-scan-btn" onclick="stopScanner()">ABORT SCAN</button>
+  <button class="close-scan-btn" onclick="stopScanner()">Cancel Scan</button>
 </div>
 
 <div class="bottom-nav">
@@ -207,7 +198,7 @@
   let html5QrcodeScanner;
   function startScanner() {
     document.getElementById('scanner-modal').style.display = 'flex';
-    html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 15, qrbox: { width: 250, height: 250 } }, false);
+    html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
     html5QrcodeScanner.render((text) => { stopScanner(); fetchPatientData(text.trim().toLowerCase()); }, () => {});
   }
   function stopScanner() {
@@ -298,7 +289,6 @@
     const text = encodeURIComponent(`*HealthChain E-Prescription*\n\n👨‍⚕️ Doctor's Note:\n${rx}\n\n_Secured via Blockchain ⛓️_`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
   }
-
   // 🤖 THE AI BRAHMASTRA (GEMINI INTEGRATION)
   async function generateBrief() {
     const briefDiv = document.getElementById('ai-brief');
@@ -313,7 +303,7 @@
     briefDiv.innerHTML = `<h4>🤖 AI Agent</h4><p style="color:var(--accent)">Analyzing reports with Gemini AI... please wait ⏳</p>`;
     briefDiv.scrollIntoView({ behavior: 'smooth' });
 
-    // 👇 YOUR API KEY (Syntax fixed!) 👇
+    // 👇 YAHAN DALNI HAI APNI API KEY 👇
     const API_KEY = "AIzaSyD_GeFPiYHqIoNto_1WSA7bKpV4qI7FEno"; 
 
     const prompt = `You are a professional medical AI assistant. Analyze these patient medical records: ${records}. Provide a very short 2-line summary of health risks and 3 bullet points for medical action. Use a professional tone. Reply strictly in English.`;
@@ -334,6 +324,7 @@
       console.error(e);
     }
   }
+
 
 </script>
 

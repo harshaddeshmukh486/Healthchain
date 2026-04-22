@@ -9,30 +9,9 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <style>
-  /* 1. पेज को दाएँ-बाएँ खिसकने से रोकने के लिए */
-html, body {
-  overflow-x: hidden !important;
-  max-width: 100vw !important;
-}
-
-/* 2. लंबे नाम को स्क्रीन से बाहर जाने से रोकने के लिए */
-.user-badge span {
-  max-width: 90px; /* इससे ज्यादा बड़ा नाम नहीं दिखेगा */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis; /* लंबे नाम के आगे ... लगा देगा */
-  display: inline-block;
-  vertical-align: bottom;
-}
-
-/* 3. Navbar को एकदम फिक्स करने के लिए */
-nav {
-  max-width: 100vw;
-  overflow: hidden;
-}
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #060a12; --surface: #0d1520; --surface2: #141f30; --border: #1a2535;
@@ -102,6 +81,11 @@ nav {
     .doctor-info p { font-size: 0.8rem; color: var(--text-muted); }
     .revoke-btn { color: var(--danger); background: transparent; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
     .revoke-btn:hover { text-decoration: underline; }
+
+    /* NEW: PRO QR CODE STYLES */
+    .qr-panel { text-align: center; display: flex; flex-direction: column; align-items: center; background: linear-gradient(180deg, var(--surface) 0%, rgba(0, 212, 255, 0.05) 100%); border: 1px solid var(--accent); box-shadow: 0 0 20px rgba(0, 212, 255, 0.1); }
+    .qr-box { background: white; padding: 15px; border-radius: 15px; display: inline-block; margin: 10px 0 20px 0; border: 4px solid var(--surface2); }
+    .qr-desc { color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; }
 
     @media (max-width: 768px) {
       .welcome-section h1 { font-size: 1.6rem; }
@@ -203,20 +187,28 @@ nav {
       </div>
     </div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Doctor Access</h2>
-      </div>
-      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">Grant secure access to your doctor using their email ID.</p>
-      
-      <div style="display: flex; gap: 10px; margin-bottom: 25px;">
-        <input type="email" id="doctorEmail" class="input-field" placeholder="doctor@hospital.com">
-        <button class="btn btn-outline" onclick="grantAccess()">Grant</button>
+    <div>
+      <div class="panel qr-panel" style="margin-bottom: 30px;">
+        <h2 style="font-family: 'Syne'; font-size: 1.2rem; margin-bottom: 10px;">My Health Identity</h2>
+        <div class="qr-box" id="qrcode"></div>
+        <p class="qr-desc">Show this Secure QR Code to your doctor. It grants temporary read-only access to your records.</p>
       </div>
 
-      <h3 style="font-size: 1rem; margin-bottom: 15px; color: var(--text-muted);">Authorized Doctors</h3>
-      <div id="authorized-doctors-list">
-        <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 10px 0;">No doctors have access currently.</p>
+      <div class="panel">
+        <div class="panel-header" style="margin-bottom: 15px; padding-bottom: 10px;">
+          <h2>Manual Access</h2>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Grant secure access using email if QR is not scannable.</p>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+          <input type="email" id="doctorEmail" class="input-field" placeholder="doctor@hospital.com">
+          <button class="btn btn-outline" onclick="grantAccess()">Grant</button>
+        </div>
+
+        <h3 style="font-size: 1rem; margin-bottom: 15px; color: var(--text-muted);">Authorized Doctors</h3>
+        <div id="authorized-doctors-list">
+          <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 10px 0;">No doctors have access currently.</p>
+        </div>
       </div>
     </div>
 
@@ -245,6 +237,20 @@ nav {
       document.getElementById('global-loader').style.display = 'none';
       document.getElementById('display-name').textContent = user.displayName || user.email.split('@')[0];
       document.getElementById('welcome-name').textContent = user.displayName || user.email.split('@')[0];
+      
+      // NEW: Generate QR Code automatically
+      setTimeout(() => {
+        document.getElementById('qrcode').innerHTML = ""; // clear loading
+        new QRCode(document.getElementById("qrcode"), {
+          text: user.email.toLowerCase(),
+          width: 160,
+          height: 160,
+          colorDark : "#000000",
+          colorLight : "#ffffff",
+          correctLevel : QRCode.CorrectLevel.H
+        });
+      }, 500);
+
       loadReports();
       loadDoctors();
     } else {
@@ -278,7 +284,7 @@ nav {
 
     db.collection("reports").add({
       patientId: currentUser.uid,
-      patientEmail: currentUser.email,
+      patientEmail: currentUser.email.toLowerCase(),
       reportName: name,
       findings: value,
       status: status,
@@ -289,12 +295,11 @@ nav {
       document.getElementById('reportName').value = '';
       document.getElementById('reportValue').value = '';
       toggleAddReport();
-      loadReports();
     }).catch(err => alert("Error: " + err.message));
   }
 
   function loadReports() {
-    db.collection("reports").where("patientId", "==", currentUser.uid).orderBy("date", "desc")
+    db.collection("reports").where("patientEmail", "==", currentUser.email.toLowerCase()).orderBy("date", "desc")
       .onSnapshot((querySnapshot) => {
         const container = document.getElementById('reports-container');
         document.getElementById('total-reports-count').textContent = querySnapshot.size;
@@ -350,7 +355,6 @@ nav {
     }).then(() => {
       alert(`Access granted to ${email}`);
       document.getElementById('doctorEmail').value = '';
-      loadDoctors();
     }).catch(err => alert(err.message));
   }
 
@@ -383,7 +387,7 @@ nav {
   function revokeAccess(docId) {
     if(confirm("Are you sure you want to revoke access? This doctor will no longer see your reports.")) {
       db.collection("doctor_access").doc(docId).delete().then(() => {
-        alert("Access Revoked Successfully.");
+        // notification only
       });
     }
   }

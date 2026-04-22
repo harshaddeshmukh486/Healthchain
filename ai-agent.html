@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HealthChain — AI Agent</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #060a12; --surface: #0d1520; --border: #1a2535;
+      --accent: #00d4ff; --accent2: #7c3aed; --green: #00e676;
+      --red: #ff5252; --yellow: #ffc107;
+      --text: #e8f0ff; --muted: #6b7a99;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; background: rgba(6,10,18,0.95); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .logo { display: flex; align-items: center; gap: 8px; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: var(--text); text-decoration: none; }
+    .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 24px 20px 100px; }
+
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .page-header h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .page-header p { color: var(--muted); font-size: 0.9rem; }
+
+    .section-title { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+
+    .input-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 24px; }
+    .textarea-field { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; resize: vertical; min-height: 130px; width: 100%; transition: border-color 0.2s; line-height: 1.6; }
+    .textarea-field:focus { outline: none; border-color: var(--accent); }
+
+    .btn-row { display: flex; gap: 12px; margin-top: 14px; }
+    .run-btn { flex: 1; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; padding: 14px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.3s; }
+    .run-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,212,255,0.3); }
+    .demo-btn { background: transparent; color: var(--text); border: 1px solid var(--border); padding: 14px 20px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.9rem; cursor: pointer; transition: all 0.3s; }
+    .demo-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* STEPS */
+    .steps-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 24px; display: none; }
+    .steps-card.show { display: block; }
+    .step-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .step-item:last-child { border-bottom: none; }
+    .step-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; transition: all 0.5s; }
+    .step-circle.pending { background: var(--border); color: var(--muted); }
+    .step-circle.active { background: rgba(0,212,255,0.2); color: var(--accent); border: 2px solid var(--accent); animation: spin 1s linear infinite; }
+    .step-circle.done { background: var(--green); color: #000; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .step-text { font-size: 0.9rem; }
+    .step-text.active { color: var(--accent); }
+    .step-text.done { color: var(--text); }
+    .step-text.pending { color: var(--muted); }
+
+    /* RESULT */
+    .result-card { background: var(--surface); border: 1px solid rgba(0,212,255,0.3); border-radius: 20px; padding: 24px; margin-bottom: 24px; display: none; }
+    .result-card.show { display: block; }
+    .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .result-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; }
+    .complete-badge { background: var(--green); color: #000; padding: 4px 12px; border-radius: 50px; font-size: 0.78rem; font-weight: 700; }
+
+    .findings { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+    .finding { display: flex; align-items: flex-start; gap: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+    .finding-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .finding-title { font-weight: 600; font-size: 0.88rem; margin-bottom: 4px; }
+    .finding-desc { color: var(--muted); font-size: 0.82rem; line-height: 1.5; }
+    .finding.critical .finding-title { color: var(--red); }
+    .finding.warning .finding-title { color: var(--yellow); }
+    .finding.normal .finding-title { color: var(--green); }
+
+    .action-plan { background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.2); border-radius: 14px; padding: 16px; }
+    .action-plan h4 { font-family: 'Syne', sans-serif; font-weight: 700; color: #a78bfa; margin-bottom: 12px; font-size: 0.95rem; }
+    .action-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; line-height: 1.5; }
+    .action-num { width: 22px; height: 22px; background: rgba(124,58,237,0.3); color: #a78bfa; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(6,10,18,0.95); backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 16px; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--muted); font-size: 0.7rem; transition: color 0.2s; padding: 4px 16px; }
+    .nav-item.active { color: var(--accent); }
+    .nav-item:hover { color: var(--accent); }
+    .nav-icon { font-size: 1.3rem; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .page-header { animation: fadeUp 0.4s ease; }
+    .input-card { animation: fadeUp 0.4s ease 0.1s both; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo"><div class="logo-icon">⛓</div>HealthChain</a>
+  <a href="patient.html" style="color:var(--muted);text-decoration:none;font-size:0.85rem">← Back</a>
+</nav>
+
+<div class="container">
+
+  <div class="page-header">
+    <h1>🤖 <span>Agentic AI</span></h1>
+    <p>AI automatically analyses your report, detects risks, creates doctor brief</p>
+  </div>
+
+  <div class="input-card">
+    <div class="section-title">📄 Paste your Report here</div>
+    <textarea class="textarea-field" id="report-input" placeholder="Example:
+Hemoglobin: 8.5 g/dL
+Blood Sugar: 180 mg/dL
+Blood Pressure: 145/95 mmHg
+WBC: 11000 /μL
+Cholesterol: 240 mg/dL"></textarea>
+    <div class="btn-row">
+      <button class="run-btn" onclick="runAgent()">🚀 Run AI Agent</button>
+      <button class="demo-btn" onclick="runDemo()">📋 Try Demo</button>
+    </div>
+  </div>
+
+  <div class="steps-card" id="steps-card">
+    <div class="section-title">⚡ Agent Processing...</div>
+    <div class="step-item">
+      <div class="step-circle pending" id="s1">1</div>
+      <div class="step-text pending" id="t1">Reading report values...</div>
+    </div>
+    <div class="step-item">
+      <div class="step-circle pending" id="s2">2</div>
+      <div class="step-text pending" id="t2">Comparing with normal ranges...</div>
+    </div>
+    <div class="step-item">
+      <div class="step-circle pending" id="s3">3</div>
+      <div class="step-text pending" id="t3">Analysing health risks...</div>
+    </div>
+    <div class="step-item">
+      <div class="step-circle pending" id="s4">4</div>
+      <div class="step-text pending" id="t4">Generating doctor brief...</div>
+    </div>
+    <div class="step-item">
+      <div class="step-circle pending" id="s5">5</div>
+      <div class="step-text pending" id="t5">Action plan ready!</div>
+    </div>
+  </div>
+
+  <div class="result-card" id="result-card"></div>
+
+</div>
+
+<div class="bottom-nav">
+  <a href="patient.html" class="nav-item"><span class="nav-icon">🏠</span><span>Patient</span></a>
+  <a href="ai-agent.html" class="nav-item active"><span class="nav-icon">🤖</span><span>AI Agent</span></a>
+  <a href="doctor.html" class="nav-item"><span class="nav-icon">👨‍⚕️</span><span>Doctor</span></a>
+  <a href="blockchain.html" class="nav-item"><span class="nav-icon">🔗</span><span>Blockchain</span></a>
+</div>
+
+<script>
+  // 🔥 FIREBASE SECURITY CHECK 🔥
+  window.addEventListener('load', function() {
+    const firebaseConfig = {
+      apiKey: "AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",
+      authDomain: "helthchain.firebaseapp.com",
+      projectId: "helthchain",
+      storageBucket: "helthchain.appspot.com",
+      messagingSenderId: "682542534348",
+      appId: "1:682542534348:web:bedb3583d7d2eb49a57c69"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    firebase.auth().onAuthStateChanged((user) => {
+      if (!user) window.location.replace('login.html'); // Bina login koi access nahi kar payega
+    });
+  });
+
+  // 👇 BHAU, YAHAN APNI ASLI GEMINI API KEY PASTE KAR 👇
+  const API_KEY = "YOUR_GEMINI_API_KEY_HERE";
+  // 👆 BHAU, YAHAN APNI ASLI GEMINI API KEY PASTE KAR 👆
+
+  window.runDemo = function() {
+    document.getElementById('report-input').value = `Hemoglobin: 8.5 g/dL\nBlood Sugar: 180 mg/dL\nBlood Pressure: 145/95 mmHg\nWBC: 11000 /μL\nCholesterol: 240 mg/dL`;
+    runAgent();
+  }
+
+  window.runAgent = async function() {
+    const input = document.getElementById('report-input').value;
+    if (!input.trim()) { alert('Please paste your report data!'); return; }
+
+    const stepsCard = document.getElementById('steps-card');
+    const resultCard = document.getElementById('result-card');
+    stepsCard.classList.add('show');
+    resultCard.classList.remove('show');
+    stepsCard.scrollIntoView({ behavior: 'smooth' });
+
+    let current = 0;
+    function updateStep() {
+      if (current > 0) {
+        document.getElementById('s' + current).className = 'step-circle done';
+        document.getElementById('s' + current).textContent = '✓';
+        document.getElementById('t' + current).className = 'step-text done';
+      }
+      current++;
+      if (current <= 5) {
+        document.getElementById('s' + current).className = 'step-circle active';
+        document.getElementById('s' + current).textContent = '⟳';
+        document.getElementById('t' + current).className = 'step-text active';
+      }
+    }
+
+    let stepInterval = setInterval(() => {
+      if (current < 4) { updateStep(); }
+    }, 800);
+    updateStep();
+
+    try {
+      const prompt = `Act as an expert medical AI. Analyze the following health report data:\n${input}\n\nProvide the result STRICTLY in this exact HTML structure (do not use markdown, do not write "\`\`\`html", just pure raw HTML code):\n<div class="findings">\n<div class="finding [USE ONLY ONE CLASS: critical, warning, or normal]">\n<div class="finding-icon">[Emoji: 🚨 for critical, ⚠️ for warning, ✅ for normal]</div>\n<div>\n<div class="finding-title">[Severity] - [Metric Name]: [Value]</div>\n<div class="finding-desc">[Short clinical insight]</div>\n</div>\n</div>\n\n</div>\n<div class="action-plan">\n<h4>📋 Recommended Action Plan</h4>\n<div class="action-item"><div class="action-num">1</div><span>[Action 1]</span></div>\n\n</div>`;
+
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,{
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error.message);
+
+      let htmlContent = data.candidates[0].content.parts[0].text;
+      htmlContent = htmlContent.replace(/```html/g, '').replace(/```/g, '');
+
+      clearInterval(stepInterval);
+      while(current < 5) { updateStep(); }
+      
+      resultCard.innerHTML = `<div class="result-header"><div class="result-title">🤖 Live AI Health Analysis</div><span class="complete-badge">✅ REALTIME</span></div>` + htmlContent;
+      
+      setTimeout(() => {
+        resultCard.classList.add('show');
+        resultCard.scrollIntoView({ behavior: 'smooth' });
+      }, 400);
+
+    } catch (e) {
+      clearInterval(stepInterval);
+      resultCard.innerHTML = `<div class="result-header"><div class="result-title" style="color:var(--red);">❌ AI Server Error</div></div><p>Could not connect to Gemini AI. Check API Key. Error: ${e.message}</p>`;
+      resultCard.classList.add('show');
+    }
+  }
+</script>
+
+</body>
+</html>

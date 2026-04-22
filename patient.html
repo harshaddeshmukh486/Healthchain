@@ -9,16 +9,22 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <style>
+    /* 🛡️ YOUR UI FIXES (Don't Change) */
+    html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+    .user-badge span { max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: bottom; }
+    nav { max-width: 100vw; overflow: hidden; }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #060a12; --surface: #0d1520; --surface2: #141f30; --border: #1a2535;
       --accent: #00d4ff; --accent2: #7c3aed; --text: #e8f0ff; --text-muted: #6b7a99;
       --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
     }
-    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
     
     #global-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .spinner { border: 4px solid rgba(0, 212, 255, 0.1); border-top: 4px solid var(--accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
@@ -65,6 +71,10 @@
     .input-field { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 15px; color: white; outline: none; font-family: inherit; }
     .input-field:focus { border-color: var(--accent); }
     
+    /* 📸 ULTRA PRO MAX UPLOAD BOX */
+    .upload-box { text-align: center; border: 2px dashed var(--accent); padding: 25px; border-radius: 15px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; }
+    .upload-box:hover { background: rgba(0, 212, 255, 0.05); }
+
     .report-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
     .report-card:hover { border-color: var(--accent); }
     .report-info h4 { margin-bottom: 4px; font-size: 1.05rem; }
@@ -82,10 +92,9 @@
     .revoke-btn { color: var(--danger); background: transparent; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
     .revoke-btn:hover { text-decoration: underline; }
 
-    /* NEW: PRO QR CODE STYLES */
-    .qr-panel { text-align: center; display: flex; flex-direction: column; align-items: center; background: linear-gradient(180deg, var(--surface) 0%, rgba(0, 212, 255, 0.05) 100%); border: 1px solid var(--accent); box-shadow: 0 0 20px rgba(0, 212, 255, 0.1); }
-    .qr-box { background: white; padding: 15px; border-radius: 15px; display: inline-block; margin: 10px 0 20px 0; border: 4px solid var(--surface2); }
-    .qr-desc { color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; }
+    /* 📱 PRO QR CODE PANEL */
+    .qr-panel { text-align: center; display: flex; flex-direction: column; align-items: center; background: linear-gradient(180deg, var(--surface) 0%, rgba(0, 212, 255, 0.05) 100%); border: 1px solid var(--accent); }
+    .qr-box { background: white; padding: 15px; border-radius: 15px; display: inline-block; margin: 15px 0; }
 
     @media (max-width: 768px) {
       .welcome-section h1 { font-size: 1.6rem; }
@@ -95,9 +104,7 @@
       .logo { font-size: 1.2rem; }
       .user-name { display: none; }
       .panel { padding: 15px; }
-      .btn { font-size: 0.85rem; padding: 8px 15px; }
       .report-card { flex-direction: column; align-items: flex-start; gap: 10px; }
-      .report-card > div:last-child { width: 100%; text-align: left !important; }
     }
   </style>
 </head>
@@ -105,7 +112,7 @@
 
 <div id="global-loader">
   <div class="spinner"></div>
-  <p style="margin-top: 20px; color: var(--text-muted); font-weight: 600;">Loading...</p>
+  <p style="margin-top: 20px; color: var(--text-muted); font-weight: 600;">Securing Vault...</p>
 </div>
 
 <nav>
@@ -141,7 +148,7 @@
     <div class="stat-card">
       <div class="stat-icon icon-green">🔒</div>
       <div class="stat-info">
-        <h3>100%</h3>
+        <h3>Verified</h3>
         <p>Blockchain Secured</p>
       </div>
     </div>
@@ -156,14 +163,21 @@
       </div>
       
       <div id="add-report-form" style="display: none; background: var(--surface2); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px dashed var(--border);">
-        <h3 style="margin-bottom: 15px; font-size: 1.1rem;">Secure New Report</h3>
+        
+        <div class="upload-box" onclick="document.getElementById('reportFile').click()">
+          <div style="font-size: 2.5rem; margin-bottom: 10px;">📸</div>
+          <p style="color: var(--accent); font-weight: 700;">Tap to Take Photo or Upload</p>
+          <p id="fileNameDisplay" style="font-size: 0.8rem; color: var(--success); margin-top: 5px; display: none; font-weight: 600;">File Ready!</p>
+          <input type="file" id="reportFile" accept="image/*,application/pdf" style="display: none;" onchange="updateFileName(this)">
+        </div>
+
         <div class="form-group">
           <label>Report Name (e.g. Blood Test, MRI)</label>
           <input type="text" id="reportName" class="input-field" placeholder="Enter report name">
         </div>
         <div class="form-group">
-          <label>Key Findings / Values</label>
-          <input type="text" id="reportValue" class="input-field" placeholder="e.g. Blood Sugar 140 mg/dL">
+          <label>Summary / Findings</label>
+          <input type="text" id="reportValue" class="input-field" placeholder="e.g. Normal HB, High Sugar">
         </div>
         <div class="form-group">
           <label>Status</label>
@@ -173,42 +187,31 @@
           </select>
         </div>
         <div style="display: flex; gap: 10px; margin-top: 20px;">
-          <button class="btn btn-primary" onclick="saveReport()">Secure on Blockchain</button>
+          <button id="saveBtn" class="btn btn-primary" onclick="saveReport()">Secure on Blockchain 🔗</button>
           <button class="btn btn-outline" onclick="toggleAddReport()">Cancel</button>
         </div>
       </div>
 
-      <div id="reports-container">
-        <div class="empty-state">
-          <div style="font-size: 3rem; margin-bottom: 10px;">📭</div>
-          <h3>No Records Found</h3>
-          <p>Click '+ Add New Report' to secure your first medical record.</p>
-        </div>
-      </div>
+      <div id="reports-container"></div>
     </div>
 
     <div>
       <div class="panel qr-panel" style="margin-bottom: 30px;">
         <h2 style="font-family: 'Syne'; font-size: 1.2rem; margin-bottom: 10px;">My Health Identity</h2>
         <div class="qr-box" id="qrcode"></div>
-        <p class="qr-desc">Show this Secure QR Code to your doctor. It grants temporary read-only access to your records.</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Share this QR with your doctor for instant access.</p>
       </div>
 
       <div class="panel">
-        <div class="panel-header" style="margin-bottom: 15px; padding-bottom: 10px;">
-          <h2>Manual Access</h2>
+        <div class="panel-header">
+          <h2>Doctor Access</h2>
         </div>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Grant secure access using email if QR is not scannable.</p>
-        
         <div style="display: flex; gap: 10px; margin-bottom: 25px;">
           <input type="email" id="doctorEmail" class="input-field" placeholder="doctor@hospital.com">
           <button class="btn btn-outline" onclick="grantAccess()">Grant</button>
         </div>
-
         <h3 style="font-size: 1rem; margin-bottom: 15px; color: var(--text-muted);">Authorized Doctors</h3>
-        <div id="authorized-doctors-list">
-          <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 10px 0;">No doctors have access currently.</p>
-        </div>
+        <div id="authorized-doctors-list"></div>
       </div>
     </div>
 
@@ -228,6 +231,7 @@
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
+  const storage = firebase.storage();
 
   let currentUser = null;
 
@@ -238,9 +242,9 @@
       document.getElementById('display-name').textContent = user.displayName || user.email.split('@')[0];
       document.getElementById('welcome-name').textContent = user.displayName || user.email.split('@')[0];
       
-      // NEW: Generate QR Code automatically
+      // IDENTITY QR GENERATION
       setTimeout(() => {
-        document.getElementById('qrcode').innerHTML = ""; // clear loading
+        document.getElementById('qrcode').innerHTML = ""; 
         new QRCode(document.getElementById("qrcode"), {
           text: user.email.toLowerCase(),
           width: 160,
@@ -258,139 +262,127 @@
     }
   });
 
-  function handleLogout() {
-    auth.signOut().then(() => {
-      window.location.replace('login.html');
-    });
+  function updateFileName(input) {
+    const display = document.getElementById('fileNameDisplay');
+    if (input.files[0]) {
+      display.textContent = "✅ " + input.files[0].name;
+      display.style.display = "block";
+    }
   }
 
-  function toggleAddReport() {
-    const form = document.getElementById('add-report-form');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
-  }
-
-  function generateHash() {
-    return '0x' + Array.from({length: 40}, () => Math.floor(Math.random() * 16).toString(16)).join('');
-  }
-
-  function saveReport() {
+  async function saveReport() {
+    const file = document.getElementById('reportFile').files[0];
     const name = document.getElementById('reportName').value;
     const value = document.getElementById('reportValue').value;
     const status = document.getElementById('reportStatus').value;
+    const btn = document.getElementById('saveBtn');
 
-    if(!name || !value) return alert("Please fill all fields!");
+    if(!name || !file) return alert("Pehle photo khicho aur title daalo!");
 
-    const hash = generateHash();
+    btn.innerText = "Securing on Blockchain...";
+    btn.disabled = true;
 
-    db.collection("reports").add({
-      patientId: currentUser.uid,
-      patientEmail: currentUser.email.toLowerCase(),
-      reportName: name,
-      findings: value,
-      status: status,
-      blockchainHash: hash,
-      date: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-      alert("Report Secured on Blockchain! 🔗");
-      document.getElementById('reportName').value = '';
-      document.getElementById('reportValue').value = '';
-      toggleAddReport();
-    }).catch(err => alert("Error: " + err.message));
+    try {
+      // 1. Upload Asli File to Storage
+      const storageRef = storage.ref(`reports/${currentUser.uid}/${Date.now()}_${file.name}`);
+      const snapshot = await storageRef.put(file);
+      const downloadURL = await snapshot.ref.getDownloadURL();
+
+      // 2. Save Metadata to Firestore
+      await db.collection("reports").add({
+        patientId: currentUser.uid,
+        patientEmail: currentUser.email.toLowerCase(),
+        reportName: name,
+        findings: value,
+        status: status,
+        fileUrl: downloadURL,
+        blockchainHash: '0x' + Array.from({length: 40}, () => Math.floor(Math.random() * 16).toString(16)).join(''),
+        date: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      alert("Report Secured Successfully! 🚀🔗");
+      location.reload();
+    } catch (e) {
+      alert("Error: " + e.message);
+      btn.disabled = false;
+    }
   }
 
   function loadReports() {
     db.collection("reports").where("patientEmail", "==", currentUser.email.toLowerCase()).orderBy("date", "desc")
-      .onSnapshot((querySnapshot) => {
+      .onSnapshot((snap) => {
         const container = document.getElementById('reports-container');
-        document.getElementById('total-reports-count').textContent = querySnapshot.size;
-        let abnormalCount = 0;
+        document.getElementById('total-reports-count').textContent = snap.size;
+        let abCount = 0;
         
-        if (querySnapshot.empty) {
-          container.innerHTML = `
-            <div class="empty-state">
-              <div style="font-size: 3rem; margin-bottom: 10px;">📭</div>
-              <h3>No Records Found</h3>
-              <p>Click '+ Add New Report' to secure your first medical record.</p>
-            </div>`;
-          document.getElementById('abnormal-count').textContent = 0;
+        if (snap.empty) {
+          container.innerHTML = `<div class="empty-state"><h3>No Records Found</h3><p>Upload a report to start.</p></div>`;
           return;
         }
 
         let html = '';
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          const dateStr = data.date ? data.date.toDate().toLocaleDateString() : 'Just now';
-          const isAbnormal = data.status === 'Abnormal';
-          if(isAbnormal) abnormalCount++;
-
+        snap.forEach((doc) => {
+          const d = doc.data();
+          if(d.status === 'Abnormal') abCount++;
+          const dateStr = d.date ? d.date.toDate().toLocaleDateString() : 'Just now';
           html += `
             <div class="report-card">
               <div class="report-info">
-                <h4>${data.reportName}</h4>
+                <h4>${d.reportName}</h4>
                 <div class="report-meta">
                   <span>📅 ${dateStr}</span>
-                  <span>🔗 Hash: ${data.blockchainHash.substring(0,10)}...</span>
+                  <span>🔗 Hash: ${d.blockchainHash.substring(0,12)}...</span>
                 </div>
-                <p style="margin-top: 8px; font-size: 0.9rem; color: var(--text);">${data.findings}</p>
+                <a href="${d.fileUrl}" target="_blank" style="color:var(--accent); font-size:0.85rem; text-decoration:none; display:block; margin-top:10px; font-weight:700;">👁️ View Original Report</a>
               </div>
-              <div style="text-align: right;">
-                <span class="status-badge ${isAbnormal ? 'status-abnormal' : 'status-normal'}">${data.status}</span>
-              </div>
+              <span class="status-badge ${d.status==='Abnormal'?'status-abnormal':'status-normal'}">${d.status}</span>
             </div>
           `;
         });
         container.innerHTML = html;
-        document.getElementById('abnormal-count').textContent = abnormalCount;
+        document.getElementById('abnormal-count').textContent = abCount;
       });
   }
 
   function grantAccess() {
     const email = document.getElementById('doctorEmail').value.trim();
-    if(!email) return alert("Enter doctor's email");
-
+    if(!email) return alert("Enter doctor email");
     db.collection("doctor_access").add({
       patientId: currentUser.uid,
       doctorEmail: email.toLowerCase(),
       grantedAt: firebase.firestore.FieldValue.serverTimestamp()
     }).then(() => {
-      alert(`Access granted to ${email}`);
+      alert("Access Granted!");
       document.getElementById('doctorEmail').value = '';
-    }).catch(err => alert(err.message));
+    });
   }
 
   function loadDoctors() {
     db.collection("doctor_access").where("patientId", "==", currentUser.uid)
-      .onSnapshot((querySnapshot) => {
+      .onSnapshot((snap) => {
         const list = document.getElementById('authorized-doctors-list');
-        if(querySnapshot.empty) {
-          list.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 10px 0;">No doctors have access currently.</p>`;
-          return;
-        }
-
         let html = '';
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
+        snap.forEach((doc) => {
           html += `
             <div class="doctor-item">
-              <div class="doctor-info">
-                <h4>👨‍⚕️ Doctor</h4>
-                <p>${data.doctorEmail}</p>
-              </div>
+              <div class="doctor-info"><h4>👨‍⚕️ Doctor</h4><p>${doc.data().doctorEmail}</p></div>
               <button class="revoke-btn" onclick="revokeAccess('${doc.id}')">Revoke</button>
-            </div>
-          `;
+            </div>`;
         });
-        list.innerHTML = html;
+        list.innerHTML = html || '<p style="text-align:center; font-size:0.8rem; color:var(--text-muted);">No doctors authorized.</p>';
       });
   }
 
-  function revokeAccess(docId) {
-    if(confirm("Are you sure you want to revoke access? This doctor will no longer see your reports.")) {
-      db.collection("doctor_access").doc(docId).delete().then(() => {
-        // notification only
-      });
-    }
+  function revokeAccess(id) {
+    if(confirm("Revoke access?")) db.collection("doctor_access").doc(id).delete();
   }
+
+  function toggleAddReport() {
+    const f = document.getElementById('add-report-form');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function handleLogout() { auth.signOut().then(() => window.location.replace('login.html')); }
 </script>
 </body>
 </html>

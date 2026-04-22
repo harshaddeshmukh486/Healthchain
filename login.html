@@ -11,6 +11,29 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
   <style>
+/* 1. पेज को दाएँ-बाएँ खिसकने से रोकने के लिए */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+}
+
+/* 2. लंबे नाम को स्क्रीन से बाहर जाने से रोकने के लिए */
+.user-badge span {
+  max-width: 90px; /* इससे ज्यादा बड़ा नाम नहीं दिखेगा */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* लंबे नाम के आगे ... लगा देगा */
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+/* 3. Navbar को एकदम फिक्स करने के लिए */
+nav {
+  max-width: 100vw;
+  overflow: hidden;
+}
+
+  
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #060a12; --surface: #0d1520; --border: #1a2535;

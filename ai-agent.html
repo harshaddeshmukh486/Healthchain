@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HealthChain — AI Health Agent</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #060a12; --surface: #0d1520; --border: #1a2535;
+      --accent: #00d4ff; --accent2: #7c3aed; --green: #00e676;
+      --red: #ff5252; --yellow: #ffc107;
+      --text: #e8f0ff; --muted: #6b7a99;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; background: rgba(6,10,18,0.95); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .logo { display: flex; align-items: center; gap: 8px; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: var(--text); text-decoration: none; }
+    .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 24px 20px 100px; }
+
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .page-header h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .page-header p { color: var(--muted); font-size: 0.9rem; }
+
+    .section-title { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+
+    /* MODE SWITCHER */
+    .mode-switcher { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .mode-btn { flex: 1; min-width: 140px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--muted); cursor: pointer; transition: 0.3s; font-family: inherit; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .mode-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.05); }
+    .mode-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* API KEY BANNER */
+    .api-setup-banner { background: rgba(255,193,7,0.08); border: 1px solid rgba(255,193,7,0.3); border-radius: 14px; padding: 16px; margin-bottom: 20px; display: none; }
+    .api-setup-banner h4 { color: var(--yellow); font-family: 'Syne', sans-serif; margin-bottom: 8px; font-size: 0.9rem; }
+    .api-setup-banner p { color: var(--muted); font-size: 0.82rem; margin-bottom: 10px; line-height: 1.5; }
+    .api-setup-banner a { color: var(--accent); text-decoration: none; }
+    .api-key-input { width: 100%; background: var(--bg); border: 1px solid rgba(255,193,7,0.3); border-radius: 10px; padding: 10px 14px; color: var(--text); font-family: monospace; font-size: 0.85rem; outline: none; margin-bottom: 10px; }
+    .api-key-input:focus { border-color: var(--yellow); }
+    .save-key-btn { background: var(--yellow); color: #000; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.88rem; font-family: inherit; }
+
+    .input-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 24px; }
+    .textarea-field { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; resize: vertical; min-height: 130px; width: 100%; transition: border-color 0.2s; line-height: 1.6; outline: none; }
+    .textarea-field:focus { border-color: var(--accent); }
+
+    .lang-selector { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .lang-chip { padding: 6px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 50px; cursor: pointer; font-size: 0.82rem; color: var(--muted); transition: 0.2s; font-family: inherit; }
+    .lang-chip.active { background: rgba(0,212,255,0.1); border-color: var(--accent); color: var(--accent); }
+
+    .btn-row { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+    .run-btn { flex: 1; min-width: 150px; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; padding: 14px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .run-btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,212,255,0.3); }
+    .run-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .demo-btn { background: transparent; color: var(--text); border: 1px solid var(--border); padding: 14px 20px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.9rem; cursor: pointer; transition: all 0.3s; }
+    .demo-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* PATIENT REPORTS LIST */
+    .reports-list { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .report-checkbox-item { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; transition: 0.2s; }
+    .report-checkbox-item:hover { border-color: var(--accent); }
+    .report-checkbox-item.selected { border-color: var(--accent); background: rgba(0,212,255,0.05); }
+    .report-checkbox-item input { margin-top: 3px; cursor: pointer; accent-color: var(--accent); }
+    .report-checkbox-info { flex: 1; min-width: 0; }
+    .report-checkbox-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 3px; word-break: break-word; }
+    .report-checkbox-findings { color: var(--muted); font-size: 0.8rem; word-break: break-word; }
+    .report-checkbox-status { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; margin-left: 8px; }
+    .report-checkbox-status.normal { background: rgba(16, 185, 129, 0.1); color: var(--green); }
+    .report-checkbox-status.abnormal { background: rgba(239, 68, 68, 0.1); color: var(--red); }
+
+    .btn-spinner { border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; width: 14px; height: 14px; animation: btnspin 0.8s linear infinite; display: inline-block; }
+    @keyframes btnspin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* STEPS */
+    .steps-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 24px; display: none; }
+    .steps-card.show { display: block; }
+    .step-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .step-item:last-child { border-bottom: none; }
+    .step-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; transition: all 0.5s; }
+    .step-circle.pending { background: var(--border); color: var(--muted); }
+    .step-circle.active { background: rgba(0,212,255,0.2); color: var(--accent); border: 2px solid var(--accent); animation: spin 1s linear infinite; }
+    .step-circle.done { background: var(--green); color: #000; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .step-text { font-size: 0.9rem; }
+    .step-text.active { color: var(--accent); }
+    .step-text.done { color: var(--text); }
+    .step-text.pending { color: var(--muted); }
+
+    /* RESULT */
+    .result-card { background: var(--surface); border: 1px solid rgba(0,212,255,0.3); border-radius: 20px; padding: 24px; margin-bottom: 24px; display: none; }
+    .result-card.show { display: block; }
+    .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+    .result-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; }
+    .complete-badge { background: var(--green); color: #000; padding: 4px 12px; border-radius: 50px; font-size: 0.78rem; font-weight: 700; }
+    .error-badge { background: var(--red); color: #fff; padding: 4px 12px; border-radius: 50px; font-size: 0.78rem; font-weight: 700; }
+
+    .ai-output { line-height: 1.7; font-size: 0.92rem; }
+    .ai-output h3 { font-family: 'Syne', sans-serif; font-size: 1rem; margin: 14px 0 10px; color: var(--accent); }
+    .ai-output strong { color: var(--accent); font-weight: 700; }
+    .ai-output ul { margin: 10px 0; padding-left: 20px; }
+    .ai-output li { margin-bottom: 6px; }
+    .ai-output p { margin-bottom: 8px; }
+
+    .ai-disclaimer { background: rgba(255,193,7,0.05); border: 1px solid rgba(255,193,7,0.2); border-radius: 10px; padding: 12px; margin-top: 16px; font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+    .ai-disclaimer strong { color: var(--yellow); }
+
+    .result-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .action-btn { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px 16px; border-radius: 50px; font-family: inherit; font-weight: 500; font-size: 0.85rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
+    .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Toast */
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 20px; z-index: 10000; max-width: 90%; min-width: 280px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: transform 0.3s ease; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { border-color: var(--red); color: var(--red); }
+    .toast.success { border-color: var(--green); color: var(--green); }
+    .toast.info { border-color: var(--accent); color: var(--accent); }
+    .toast.warning { border-color: var(--yellow); color: var(--yellow); }
+
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(6,10,18,0.95); backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 16px; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--muted); font-size: 0.7rem; transition: color 0.2s; padding: 4px 16px; }
+    .nav-item.active { color: var(--accent); }
+    .nav-item:hover { color: var(--accent); }
+    .nav-icon { font-size: 1.3rem; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .page-header { animation: fadeUp 0.4s ease; }
+    .input-card { animation: fadeUp 0.4s ease 0.1s both; }
+    .empty-state { text-align: center; padding: 30px 20px; color: var(--muted); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<!-- Toast notifications -->
+<div id="toast" class="toast" role="alert" aria-live="polite">
+  <span id="toast-icon">ℹ️</span>
+  <span id="toast-msg"></span>
+</div>
+
+<nav>
+  <a href="index.html" class="logo"><div class="logo-icon">⛓</div>HealthChain</a>
+  <a href="patient.html" style="color:var(--muted);text-decoration:none;font-size:0.85rem">← Back</a>
+</nav>
+
+<div class="container">
+
+  <div class="page-header">
+    <h1>🤖 <span>AI Health Assistant</span></h1>
+    <p>Get instant AI insights from your health records — powered by Gemini AI.</p>
+  </div>
+
+  <!-- API Key Setup Banner -->
+  <div class="api-setup-banner" id="api-banner">
+    <h4>🔑 One-time Gemini AI Setup</h4>
+    <p>AI analysis ke liye free Gemini API key chahiye. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Get free key here →</a><br>Key sirf is device pe save hogi — server pe nahi jaayegi. 🔒</p>
+    <input type="text" class="api-key-input" id="api-key-input" placeholder="AIzaSy... (Paste your Gemini API Key)"/>
+    <button class="save-key-btn" onclick="saveApiKey()" type="button">💾 Save Key</button>
+  </div>
+
+  <!-- Mode Switcher -->
+  <div class="mode-switcher">
+    <button class="mode-btn active" id="mode-records" onclick="switchMode('records')" type="button">📁 My Records</button>
+    <button class="mode-btn" id="mode-manual" onclick="switchMode('manual')" type="button">✏️ Paste Report</button>
+  </div>
+
+  <!-- MODE 1: Select from existing records -->
+  <div class="input-card" id="records-mode">
+    <div class="section-title">📁 Select Reports to Analyze</div>
+    <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 14px;">AI will analyze selected records and give you health insights.</p>
+    
+    <div id="reports-list" class="reports-list">
+      <div class="empty-state">Loading your records...</div>
+    </div>
+
+    <div class="lang-selector">
+      <span style="font-size: 0.85rem; color: var(--muted); margin-right: 4px;">Language:</span>
+      <button class="lang-chip active" onclick="setLang('English', this)" type="button">🇬🇧 English</button>
+      <button class="lang-chip" onclick="setLang('Hindi', this)" type="button">🇮🇳 हिंदी</button>
+      <button class="lang-chip" onclick="setLang('Marathi', this)" type="button">🇮🇳 मराठी</button>
+    </div>
+
+    <div class="btn-row">
+      <button class="run-btn" id="runBtn1" onclick="runAgentFromRecords()" type="button">🚀 Analyze Selected Records</button>
+    </div>
+  </div>
+
+  <!-- MODE 2: Manual paste -->
+  <div class="input-card" id="manual-mode" style="display: none;">
+    <div class="section-title">📄 Paste Report Data</div>
+    <textarea class="textarea-field" id="report-input" placeholder="Example:
+Hemoglobin: 8.5 g/dL
+Blood Sugar: 180 mg/dL
+Blood Pressure: 145/95 mmHg
+WBC: 11000 /μL
+Cholesterol: 240 mg/dL"></textarea>
+    
+    <div class="lang-selector">
+      <span style="font-size: 0.85rem; color: var(--muted); margin-right: 4px;">Language:</span>
+      <button class="lang-chip active" onclick="setLang('English', this)" type="button">🇬🇧 English</button>
+      <button class="lang-chip" onclick="setLang('Hindi', this)" type="button">🇮🇳 हिंदी</button>
+      <button class="lang-chip" onclick="setLang('Marathi', this)" type="button">🇮🇳 मराठी</button>
+    </div>
+
+    <div class="btn-row">
+      <button class="run-btn" id="runBtn2" onclick="runAgentFromPaste()" type="button">🚀 Analyze Report</button>
+      <button class="demo-btn" onclick="runDemo()" type="button">📋 Try Demo</button>
+    </div>
+  </div>
+
+  <!-- Processing Steps -->
+  <div class="steps-card" id="steps-card">
+    <div class="section-title">⚡ AI Processing...</div>
+    <div class="step-item">
+      <div class="step-circle pending" id="s1">1</div>
+      <div class="step-text pending" id="t1">Reading report data...</div>
+    </div>
+    <div class="step-item">
+      <div class="step-circle pending" id="s2">2</div>
+      <div class="step-text pending" id="t2">Sending to Gemini AI...</div>
+    </div>
+    <div class="step-item">
+      <div class="step-circle pending" id="s3">3</div>
+      <div class="step-text pending" id="t3">AI analyzing health metrics...</div>
+    </div>
+    <div class="step-item">
+      <div class="step-circle pending" id="s4">4</div>
+      <div class="step-text pending" id="t4">Generating insights...</div>
+    </div>
+    <div class="step-item">
+      <div class="step-circle pending" id="s5">5</div>
+      <div class="step-text pending" id="t5">Ready!</div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-card" id="result-card"></div>
+
+</div>
+
+<div class="bottom-nav">
+  <a href="patient.html" class="nav-item"><span class="nav-icon">🏠</span><span>Patient</span></a>
+  <a href="ai-agent.html" class="nav-item active"><span class="nav-icon">🤖</span><span>AI Agent</span></a>
+  <a href="doctor.html" class="nav-item"><span class="nav-icon">👨‍⚕️</span><span>Doctor</span></a>
+</div>
+
+<script>
+window.addEventListener('load', function() {
+
+  // ============ FIREBASE (same as before) ============
+  const firebaseConfig = {
+    apiKey: "AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",
+    authDomain: "helthchain.firebaseapp.com",
+    projectId: "helthchain",
+    storageBucket: "helthchain.appspot.com",
+    messagingSenderId: "682542534348",
+    appId: "1:682542534348:web:bedb3583d7d2eb49a57c69"
+  };
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // ============ GLOBAL STATE ============
+  let currentUser = null;
+  let userReports = [];
+  let selectedLanguage = 'English';
+
+  // ============ UTILITY: ESCAPE HTML (XSS PREVENTION) ============
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // ============ TOAST ============
+  let toastTimeout = null;
+  function showToast(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toast-msg');
+    const toastIcon = document.getElementById('toast-icon');
+    clearTimeout(toastTimeout);
+    toastMsg.textContent = message;
+    toastIcon.textContent = type === 'error' ? '⚠️' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+    toast.className = `toast ${type} show`;
+    toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 4000);
+  }
+  window.showToast = showToast;
+
+  // ============ AUTH CHECK + LOAD RECORDS ============
+  auth.onAuthStateChanged((user) => {
+    if (!user) {
+      window.location.replace('login.html');
+      return;
+    }
+    currentUser = user;
+    checkApiKey();
+    loadUserRecords();
+  });
+
+  // ============ API KEY MANAGEMENT ============
+  function checkApiKey() {
+    if (!localStorage.getItem('hc_gemini_key')) {
+      document.getElementById('api-banner').style.display = 'block';
+    }
+  }
+
+  window.saveApiKey = function() {
+    const key = document.getElementById('api-key-input').value.trim();
+    if (!key) {
+      showToast('Please enter your API key', 'error');
+      return;
+    }
+    if (!key.startsWith('AIza') || key.length < 30) {
+      showToast('Invalid Gemini key format. Should start with AIzaSy...', 'error');
+      return;
+    }
+    localStorage.setItem('hc_gemini_key', key);
+    document.getElementById('api-banner').style.display = 'none';
+    document.getElementById('api-key-input').value = '';
+    showToast('API key saved! AI is ready to use.', 'success');
+  };
+
+  // ============ LOAD USER RECORDS ============
+  function loadUserRecords() {
+    const list = document.getElementById('reports-list');
+    
+    db.collection("reports")
+      .where("patientEmail", "==", currentUser.email.toLowerCase())
+      .orderBy("date", "desc")
+      .get()
+      .then((snap) => {
+        userReports = [];
+        if (snap.empty) {
+          list.innerHTML = `
+            <div class="empty-state">
+              <div style="font-size: 2rem; margin-bottom: 10px;">📭</div>
+              <p>No records yet.</p>
+              <p style="margin-top: 6px;"><a href="patient.html" style="color: var(--accent); text-decoration: none;">+ Add your first record →</a></p>
+            </div>`;
+          return;
+        }
+        
+        let html = '';
+        snap.forEach((doc) => {
+          const d = doc.data();
+          userReports.push({ id: doc.id, ...d });
+          const isAbnormal = d.status === 'Abnormal';
+          const dateStr = d.date ? d.date.toDate().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Recent';
+          
+          html += `
+            <label class="report-checkbox-item" for="rep-${escapeHtml(doc.id)}">
+              <input type="checkbox" id="rep-${escapeHtml(doc.id)}" value="${escapeHtml(doc.id)}" onchange="toggleReportSelection(this)">
+              <div class="report-checkbox-info">
+                <div class="report-checkbox-name">
+                  ${escapeHtml(d.reportName || 'Untitled')}
+                  <span class="report-checkbox-status ${isAbnormal ? 'abnormal' : 'normal'}">${escapeHtml(d.status || 'Normal')}</span>
+                </div>
+                <div class="report-checkbox-findings">${escapeHtml(d.findings || '')} • ${escapeHtml(dateStr)}</div>
+              </div>
+            </label>`;
+        });
+        list.innerHTML = html;
+      })
+      .catch((err) => {
+        console.error('Load records error:', err);
+        list.innerHTML = `
+          <div class="empty-state" style="color: var(--red);">
+            ⚠️ Could not load records. Please refresh.
+          </div>`;
+      });
+  }
+
+  window.toggleReportSelection = function(checkbox) {
+    const item = checkbox.closest('.report-checkbox-item');
+    if (checkbox.checked) item.classList.add('selected');
+    else item.classList.remove('selected');
+  };
+
+  // ============ MODE SWITCHER ============
+  window.switchMode = function(mode) {
+    document.getElementById('mode-records').classList.toggle('active', mode === 'records');
+    document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
+    document.getElementById('records-mode').style.display = mode === 'records' ? 'block' : 'none';
+    document.getElementById('manual-mode').style.display = mode === 'manual' ? 'block' : 'none';
+  };
+
+  // ============ LANGUAGE SELECTOR ============
+  window.setLang = function(lang, btn) {
+    selectedLanguage = lang;
+    // Update all lang-chips (both modes)
+    document.querySelectorAll('.lang-chip').forEach(el => {
+      if (el.textContent.includes(btn.textContent.split(' ')[1] || btn.textContent)) {
+        el.classList.add('active');
+      } else {
+        el.classList.remove('active');
+      }
+    });
+  };
+
+  // ============ RUN DEMO ============
+  window.runDemo = function() {
+    document.getElementById('report-input').value = `Hemoglobin: 8.5 g/dL\nBlood Sugar: 180 mg/dL\nBlood Pressure: 145/95 mmHg\nWBC: 11000 /μL\nCholesterol: 240 mg/dL`;
+    runAgentFromPaste();
+  };
+
+  // ============ RUN FROM SELECTED RECORDS ============
+  window.runAgentFromRecords = function() {
+    const checkboxes = document.querySelectorAll('#reports-list input[type="checkbox"]:checked');
+    if (checkboxes.length === 0) {
+      showToast('Please select at least one record to analyze', 'warning');
+      return;
+    }
+
+    // Build clinical input from selected records
+    let clinicalText = '';
+    checkboxes.forEach((cb) => {
+      const report = userReports.find(r => r.id === cb.value);
+      if (report) {
+        clinicalText += `${report.reportName}: ${report.findings} (Status: ${report.status})\n`;
+      }
+    });
+
+    runAIAnalysis(clinicalText, 'runBtn1');
+  };
+
+  // ============ RUN FROM MANUAL PASTE ============
+  window.runAgentFromPaste = function() {
+    const input = document.getElementById('report-input').value.trim();
+    if (!input) {
+      showToast('Please paste your report data', 'error');
+      return;
+    }
+    runAIAnalysis(input, 'runBtn2');
+  };
+
+  // ============ MAIN AI ANALYSIS FUNCTION ============
+  async function runAIAnalysis(clinicalInput, btnId) {
+    const API_KEY = localStorage.getItem('hc_gemini_key');
+    if (!API_KEY) {
+      document.getElementById('api-banner').style.display = 'block';
+      showToast('Please save your Gemini API key first', 'warning');
+      document.getElementById('api-key-input').focus();
+      document.getElementById('api-banner').scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+
+    const stepsCard = document.getElementById('steps-card');
+    const resultCard = document.getElementById('result-card');
+    const runBtn = document.getElementById(btnId);
+    const originalBtnHTML = runBtn.innerHTML;
+
+    // Reset UI
+    stepsCard.classList.add('show');
+    resultCard.classList.remove('show');
+    resultCard.innerHTML = '';
+    resetSteps();
+    stepsCard.scrollIntoView({ behavior: 'smooth' });
+
+    runBtn.disabled = true;
+    runBtn.innerHTML = '<span class="btn-spinner"></span> Analyzing...';
+
+    // Step animation
+    let current = 0;
+    let stepsComplete = false;
+    function updateStep() {
+      if (current > 0 && current <= 5) {
+        document.getElementById('s' + current).className = 'step-circle done';
+        document.getElementById('s' + current).textContent = '✓';
+        document.getElementById('t' + current).className = 'step-text done';
+      }
+      current++;
+      if (current <= 5) {
+        document.getElementById('s' + current).className = 'step-circle active';
+        document.getElementById('s' + current).textContent = '⟳';
+        document.getElementById('t' + current).className = 'step-text active';
+      }
+    }
+
+    updateStep(); // Step 1
+    setTimeout(() => { if (!stepsComplete) updateStep(); }, 600);  // Step 2
+    setTimeout(() => { if (!stepsComplete) updateStep(); }, 1200); // Step 3
+
+    try {
+      // Language-aware prompt
+      const langInstruction = selectedLanguage === 'Hindi' 
+        ? 'Respond in Hindi (Devanagari script).'
+        : selectedLanguage === 'Marathi'
+        ? 'Respond in Marathi (Devanagari script).'
+        : 'Respond in English.';
+
+      const prompt = `You are a medical AI assistant helping a patient in India understand their health records. Be accurate, empathetic, and actionable.
+
+Patient's Health Records:
+${clinicalInput}
+
+Provide analysis in this EXACT markdown format (use ** for bold, - for bullets):
+
+## Summary
+(2-3 lines: overall health snapshot)
+
+## Key Findings
+- **[Metric Name]:** [Value] — [brief note: critical/warning/normal and why]
+- (repeat for each metric)
+
+## Recommended Actions
+- [Specific action 1]
+- [Specific action 2]
+- [Specific action 3]
+
+## When to See a Doctor
+(1-2 lines about urgency)
+
+${langInstruction} Keep it concise and practical. Don't diagnose — only highlight patterns and suggest consultation.`;
+
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(API_KEY)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 1024
+          }
+        })
+      });
+
+      const data = await resp.json();
+      
+      if (data.error) throw new Error(data.error.message || 'API error');
+      if (!data.candidates || !data.candidates[0]) throw new Error('No response from AI');
+      
+      const rawText = data.candidates[0].content.parts[0].text;
+      
+      // Complete all steps
+      stepsComplete = true;
+      while (current <= 5) updateStep();
+
+      // SAFE RENDERING — escape first, then apply LIMITED markdown
+      let safeHtml = escapeHtml(rawText);
+      
+      // Headers: ## Text
+      safeHtml = safeHtml.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+      
+      // Bold: **text**
+      safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      
+      // Bullet points: - text
+      safeHtml = safeHtml.replace(/^- (.+)$/gm, '<li>$1</li>');
+      safeHtml = safeHtml.replace(/(<li>[\s\S]+?<\/li>\n?)+/g, (match) => `<ul>${match.replace(/\n/g, '')}</ul>`);
+      
+      // Paragraphs: double line break → separate paragraphs
+      safeHtml = safeHtml.split(/\n\n+/).map(p => {
+        p = p.trim();
+        if (!p) return '';
+        if (p.startsWith('<h3>') || p.startsWith('<ul>')) return p;
+        return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+      }).join('');
+
+      // Display result
+      setTimeout(() => {
+        resultCard.innerHTML = `
+          <div class="result-header">
+            <div class="result-title">🤖 AI Health Analysis</div>
+            <span class="complete-badge">✅ COMPLETE</span>
+          </div>
+          <div class="ai-output">${safeHtml}</div>
+          <div class="ai-disclaimer">
+            <strong>⚠️ Important:</strong> This is AI-generated analysis for informational purposes only. It is NOT a medical diagnosis. Always consult a qualified doctor for medical decisions.
+          </div>
+          <div class="result-actions">
+            <button class="action-btn" onclick="copyResult()">📋 Copy</button>
+            <button class="action-btn" onclick="shareViaWhatsApp()">📲 Share on WhatsApp</button>
+            <button class="action-btn" onclick="clearResult()">🗑️ Clear</button>
+          </div>`;
+        resultCard.classList.add('show');
+        resultCard.scrollIntoView({ behavior: 'smooth' });
+        showToast('Analysis complete!', 'success');
+      }, 400);
+
+    } catch (e) {
+      console.error('AI error:', e);
+      stepsComplete = true;
+      resultCard.innerHTML = `
+        <div class="result-header">
+          <div class="result-title" style="color:var(--red);">❌ AI Analysis Failed</div>
+          <span class="error-badge">ERROR</span>
+        </div>
+        <p style="color: var(--muted); line-height: 1.6;">${escapeHtml(e.message || 'Could not connect to Gemini AI.')}</p>
+        <p style="color: var(--muted); font-size: 0.85rem; margin-top: 10px;">💡 Please check your API key or internet connection.</p>`;
+      resultCard.classList.add('show');
+      showToast('Analysis failed. See error.', 'error');
+    } finally {
+      runBtn.disabled = false;
+      runBtn.innerHTML = originalBtnHTML;
+    }
+  }
+
+  // ============ RESET STEPS ============
+  function resetSteps() {
+    for (let i = 1; i <= 5; i++) {
+      const s = document.getElementById('s' + i);
+      const t = document.getElementById('t' + i);
+      if (s) { s.className = 'step-circle pending'; s.textContent = i; }
+      if (t) t.className = 'step-text pending';
+    }
+  }
+
+  // ============ RESULT ACTIONS ============
+  window.copyResult = function() {
+    const aiOutput = document.querySelector('.ai-output');
+    if (!aiOutput) return;
+    const text = aiOutput.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('Analysis copied to clipboard', 'success');
+    }).catch(() => {
+      showToast('Could not copy. Long-press to select.', 'info');
+    });
+  };
+
+  window.shareViaWhatsApp = function() {
+    const aiOutput = document.querySelector('.ai-output');
+    if (!aiOutput) return;
+    const text = aiOutput.innerText;
+    const msg = `*HealthChain AI Analysis* 🏥\n\n${text}\n\n_⚠️ AI-generated. Consult a doctor._\n_healthchain-nu.vercel.app_`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  window.clearResult = function() {
+    document.getElementById('result-card').classList.remove('show');
+    document.getElementById('steps-card').classList.remove('show');
+    resetSteps();
+    // Uncheck all
+    document.querySelectorAll('#reports-list input[type="checkbox"]').forEach(cb => {
+      cb.checked = false;
+      cb.closest('.report-checkbox-item')?.classList.remove('selected');
+    });
+    document.getElementById('report-input').value = '';
+    showToast('Cleared', 'info');
+  };
+
+});
+</script>
+
+</body>
+</html>

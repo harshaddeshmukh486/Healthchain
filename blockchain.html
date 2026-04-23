@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HealthChain — Record Ledger</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #060a12; --surface: #0d1520; --border: #1a2535;
+      --accent: #00d4ff; --accent2: #7c3aed; --green: #00e676;
+      --red: #ff5252; --yellow: #ffc107; --text: #e8f0ff; --muted: #6b7a99;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; background: rgba(6,10,18,0.95); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .logo { display: flex; align-items: center; gap: 8px; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: var(--text); text-decoration: none; }
+    .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 24px 20px 100px; }
+
+    .page-header { margin-bottom: 20px; }
+    .page-header h1 { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+    .page-header h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .page-header p { color: var(--muted); font-size: 0.9rem; }
+
+    /* POLYGON COMING SOON BANNER */
+    .polygon-banner { background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(0,212,255,0.1)); border: 1px solid rgba(124,58,237,0.3); border-radius: 14px; padding: 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+    .polygon-banner-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #8247E5, #7c3aed); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+    .polygon-banner-text { flex: 1; font-size: 0.85rem; line-height: 1.5; }
+    .polygon-banner-text strong { color: #a78bfa; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; text-align: center; }
+    .stat-num { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; color: var(--accent); }
+    .stat-label { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+    .section-title { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+
+    /* HOW IT WORKS */
+    .info-card { background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.15); border-radius: 16px; padding: 20px; margin-bottom: 28px; }
+    .info-title { font-family: 'Syne', sans-serif; font-weight: 700; margin-bottom: 12px; color: var(--accent); font-size: 0.95rem; }
+    .info-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+    .info-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+
+    /* BLOCKS */
+    .blocks-list { display: flex; flex-direction: column; gap: 0; }
+    .block-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; transition: all 0.3s; }
+    .block-card:hover { border-color: rgba(0,212,255,0.3); }
+    .block-card.genesis { border-color: rgba(124,58,237,0.4); background: rgba(124,58,237,0.05); }
+    .block-card.tampered { border-color: rgba(255,82,82,0.5); background: rgba(255,82,82,0.05); }
+    .block-connector { display: flex; justify-content: center; padding: 8px 0; }
+    .connector-line { width: 2px; height: 30px; background: linear-gradient(to bottom, var(--accent), var(--accent2)); opacity: 0.4; }
+
+    .block-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
+    .block-header-info { flex: 1; min-width: 0; }
+    .block-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.9rem; color: var(--muted); }
+    .block-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; word-break: break-word; }
+    .block-date { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .verified-badge { background: rgba(0,230,118,0.1); color: var(--green); border: 1px solid rgba(0,230,118,0.3); padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; flex-shrink: 0; }
+    .tampered-badge { background: rgba(255,82,82,0.1); color: var(--red); border: 1px solid rgba(255,82,82,0.3); padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; flex-shrink: 0; }
+
+    .block-details { font-size: 0.85rem; color: var(--muted); margin-bottom: 10px; }
+    .block-details strong { color: var(--text); }
+
+    .block-hash { margin-top: 12px; }
+    .hash-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
+    .hash-value { font-family: monospace; font-size: 0.76rem; color: var(--accent); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; word-break: break-all; cursor: pointer; transition: 0.2s; }
+    .hash-value:hover { border-color: var(--accent); }
+    .hash-value.prev { color: var(--accent2); }
+
+    .empty-blocks { background: var(--surface); border: 1px dashed var(--border); border-radius: 16px; padding: 40px 20px; text-align: center; color: var(--muted); }
+    .empty-blocks .icon { font-size: 3rem; margin-bottom: 10px; opacity: 0.5; }
+
+    /* VERIFY */
+    .verify-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 28px; margin-top: 28px; }
+    .input-field { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; transition: border-color 0.2s; width: 100%; margin-bottom: 12px; outline: none; font-family: monospace; }
+    .input-field:focus { border-color: var(--accent); }
+    .verify-btn { width: 100%; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; padding: 13px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .verify-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .verify-btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,212,255,0.3); }
+    .verify-result { margin-top: 14px; padding: 14px; border-radius: 12px; font-size: 0.88rem; display: none; line-height: 1.5; }
+    .verify-result.success { background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.3); color: var(--green); display: block; }
+    .verify-result.fail { background: rgba(255,82,82,0.1); border: 1px solid rgba(255,82,82,0.3); color: var(--red); display: block; }
+    .verify-result.info { background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.2); color: var(--accent); display: block; }
+    .verify-result-details { margin-top: 10px; padding-top: 10px; border-top: 1px solid currentColor; opacity: 0.9; font-size: 0.82rem; }
+
+    .btn-spinner { border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; width: 14px; height: 14px; animation: spin 0.8s linear infinite; display: inline-block; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .loader { display: flex; flex-direction: column; align-items: center; padding: 40px 20px; color: var(--muted); }
+    .loader .spinner-big { border: 3px solid var(--border); border-top: 3px solid var(--accent); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+
+    /* Toast */
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 20px; z-index: 10000; max-width: 90%; min-width: 280px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: transform 0.3s ease; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { border-color: var(--red); color: var(--red); }
+    .toast.success { border-color: var(--green); color: var(--green); }
+    .toast.info { border-color: var(--accent); color: var(--accent); }
+
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(6,10,18,0.95); backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 16px; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--muted); font-size: 0.7rem; transition: color 0.2s; padding: 4px 16px; }
+    .nav-item.active { color: var(--accent); }
+    .nav-item:hover { color: var(--accent); }
+    .nav-icon { font-size: 1.3rem; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .page-header { animation: fadeUp 0.4s ease; }
+    .stats-grid { animation: fadeUp 0.4s ease 0.1s both; }
+  </style>
+</head>
+<body>
+
+<!-- Toast -->
+<div id="toast" class="toast" role="alert" aria-live="polite">
+  <span id="toast-icon">ℹ️</span>
+  <span id="toast-msg"></span>
+</div>
+
+<nav>
+  <a href="index.html" class="logo"><div class="logo-icon">⛓</div>HealthChain</a>
+  <a href="patient.html" style="color:var(--muted);text-decoration:none;font-size:0.85rem">← Back</a>
+</nav>
+
+<div class="container">
+
+  <div class="page-header">
+    <h1>🔗 <span>Record Ledger</span></h1>
+    <p>Your medical records — hash-chained and tamper-detectable</p>
+  </div>
+
+  <!-- Polygon Coming Soon Banner -->
+  <div class="polygon-banner">
+    <div class="polygon-banner-icon">⛓</div>
+    <div class="polygon-banner-text">
+      <strong>Polygon Integration Coming Soon</strong><br>
+      Today your records are SHA-256 hashed in Firebase. Soon we'll deploy these hashes on-chain (Polygon) for true decentralized immutability.
+    </div>
+  </div>
+
+  <!-- STATS (real numbers) -->
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="total-blocks">—</div><div class="stat-label">Your Records</div></div>
+    <div class="stat-card"><div class="stat-num" id="verified-count" style="color:var(--green)">—</div><div class="stat-label">Verified</div></div>
+    <div class="stat-card"><div class="stat-num" id="tampered-count" style="color:var(--red)">—</div><div class="stat-label">Tampered</div></div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="info-card">
+    <div class="info-title">🔐 How Hash Chaining Works</div>
+    <div class="info-item"><div class="info-dot"></div><span>Every report gets a unique <strong>SHA-256 cryptographic hash</strong> computed in your browser</span></div>
+    <div class="info-item"><div class="info-dot"></div><span>Each new block stores the <strong>previous block's hash</strong> — creating a chain</span></div>
+    <div class="info-item"><div class="info-dot"></div><span>Any change in a record makes its hash <strong>completely different</strong></span></div>
+    <div class="info-item"><div class="info-dot"></div><span>We verify your chain <strong>every time you open this page</strong> — tamper is instantly detected</span></div>
+  </div>
+
+  <!-- BLOCKS -->
+  <div class="section-title">📦 Your Block Chain</div>
+  <div id="blocks-container">
+    <div class="loader">
+      <div class="spinner-big"></div>
+      <div>Building your chain...</div>
+    </div>
+  </div>
+
+  <!-- VERIFY -->
+  <div class="verify-card">
+    <div class="section-title">🔍 Verify a Hash</div>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:14px;">Paste any hash to check if it belongs to a record in your chain.</p>
+    <input type="text" class="input-field" id="verify-input" placeholder="Paste hash here (e.g. 0x266f6df8...)"/>
+    <button class="verify-btn" id="verifyBtn" onclick="verifyHash()">🔐 Verify Hash</button>
+    <div class="verify-result" id="verify-result"></div>
+  </div>
+
+</div>
+
+<div class="bottom-nav">
+  <a href="patient.html" class="nav-item"><span class="nav-icon">🏠</span><span>Patient</span></a>
+  <a href="ai-agent.html" class="nav-item"><span class="nav-icon">🤖</span><span>AI Agent</span></a>
+  <a href="doctor.html" class="nav-item"><span class="nav-icon">👨‍⚕️</span><span>Doctor</span></a>
+  <a href="blockchain.html" class="nav-item active"><span class="nav-icon">🔗</span><span>Ledger</span></a>
+</div>
+
+<script>
+window.addEventListener('load', function() {
+
+  // ============ FIREBASE (same config) ============
+  const firebaseConfig = {
+    apiKey: "AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",
+    authDomain: "helthchain.firebaseapp.com",
+    projectId: "helthchain",
+    storageBucket: "helthchain.appspot.com",
+    messagingSenderId: "682542534348",
+    appId: "1:682542534348:web:bedb3583d7d2eb49a57c69"
+  };
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // ============ STATE ============
+  let currentUser = null;
+  let userBlocks = []; // All verified blocks
+
+  // ============ UTILITIES ============
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  }
+
+  let toastTimeout = null;
+  function showToast(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toast-msg');
+    const toastIcon = document.getElementById('toast-icon');
+    clearTimeout(toastTimeout);
+    toastMsg.textContent = message;
+    toastIcon.textContent = type === 'error' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️';
+    toast.className = `toast ${type} show`;
+    toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 4000);
+  }
+  window.showToast = showToast;
+
+  // ============ REAL SHA-256 (same algo as patient.html) ============
+  async function generateRealHash(data) {
+    const encoder = new TextEncoder();
+    const dataBytes = encoder.encode(data);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', dataBytes);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return '0x' + hashHex;
+  }
+
+  // Short version for display
+  function shortHash(hash, len = 16) {
+    if (!hash) return 'N/A';
+    return hash.substring(0, len) + '...';
+  }
+
+  // ============ AUTH CHECK ============
+  auth.onAuthStateChanged((user) => {
+    if (!user) {
+      window.location.replace('login.html');
+      return;
+    }
+    currentUser = user;
+    buildChain();
+  });
+
+  // ============ BUILD THE BLOCKCHAIN FROM FIRESTORE ============
+  async function buildChain() {
+    const container = document.getElementById('blocks-container');
+    
+    try {
+      const snap = await db.collection("reports")
+        .where("patientEmail", "==", currentUser.email.toLowerCase())
+        .orderBy("date", "asc")  // Oldest first (Genesis → Latest)
+        .get();
+
+      if (snap.empty) {
+        container.innerHTML = `
+          <div class="empty-blocks">
+            <div class="icon">📭</div>
+            <h3 style="font-family:'Syne';margin-bottom:8px;color:var(--text);">Your Chain is Empty</h3>
+            <p>Add your first health record to start building your chain.</p>
+            <a href="patient.html" style="color:var(--accent);text-decoration:none;margin-top:12px;display:inline-block;">+ Add First Record →</a>
+          </div>`;
+        document.getElementById('total-blocks').textContent = '0';
+        document.getElementById('verified-count').textContent = '0';
+        document.getElementById('tampered-count').textContent = '0';
+        return;
+      }
+
+      // Build blocks with hash-chaining + tamper verification
+      const GENESIS_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
+      let previousHash = GENESIS_HASH;
+      let verifiedCount = 0;
+      let tamperedCount = 0;
+      userBlocks = [];
+
+      // Genesis block UI
+      let html = `
+        <div class="blocks-list">
+          <div class="block-card genesis">
+            <div class="block-header">
+              <div class="block-header-info">
+                <div class="block-num">GENESIS BLOCK #0</div>
+                <div class="block-name">HealthChain Initialized</div>
+                <div class="block-date">Start of your medical timeline</div>
+              </div>
+              <span class="verified-badge">✅ Verified</span>
+            </div>
+            <div class="block-hash">
+              <div class="hash-label">HASH</div>
+              <div class="hash-value" onclick="copyHash('${GENESIS_HASH}')" title="Click to copy">${GENESIS_HASH}</div>
+            </div>
+          </div>
+          <div class="block-connector"><div class="connector-line"></div></div>
+      `;
+
+      // Process each report as a block
+      let blockNum = 0;
+      const docs = [];
+      snap.forEach(doc => docs.push(doc));
+
+      for (const doc of docs) {
+        blockNum++;
+        const d = doc.data();
+        const storedHash = d.recordHash || d.blockchainHash || null;
+        
+        // Recompute hash to check tampering (for records using new format)
+        let computedHash = null;
+        let isVerified = true;
+        let canVerify = false;
+
+        if (d.createdAt && d.hashAlgorithm === 'SHA-256') {
+          // Reports created with new patient.html use this format
+          canVerify = true;
+          const hashInput = JSON.stringify({
+            patient: d.patientEmail,
+            reportName: d.reportName,
+            findings: d.findings,
+            status: d.status,
+            createdAt: d.createdAt
+          });
+          computedHash = await generateRealHash(hashInput);
+          isVerified = computedHash === storedHash;
+        }
+
+        if (isVerified) verifiedCount++;
+        else tamperedCount++;
+
+        const dateStr = d.date ? d.date.toDate().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent';
+        const displayHash = storedHash || 'No hash (legacy record)';
+        
+        userBlocks.push({
+          blockNum: blockNum,
+          reportName: d.reportName,
+          findings: d.findings,
+          status: d.status,
+          hash: storedHash,
+          prevHash: previousHash,
+          date: dateStr,
+          verified: isVerified
+        });
+
+        const cardClass = isVerified ? '' : 'tampered';
+        const badge = isVerified 
+          ? `<span class="verified-badge">✅ Verified</span>`
+          : `<span class="tampered-badge">⚠️ Tamper Detected</span>`;
+
+        html += `
+          <div class="block-card ${cardClass}">
+            <div class="block-header">
+              <div class="block-header-info">
+                <div class="block-num">BLOCK #${blockNum}</div>
+                <div class="block-name">${escapeHtml(d.reportName || 'Untitled')}</div>
+                <div class="block-date">${escapeHtml(dateStr)}</div>
+              </div>
+              ${badge}
+            </div>
+            <div class="block-details">
+              <strong>Findings:</strong> ${escapeHtml(d.findings || 'N/A')}<br>
+              <strong>Status:</strong> ${escapeHtml(d.status || 'Normal')}
+            </div>
+            <div class="block-hash">
+              <div class="hash-label">Hash</div>
+              <div class="hash-value" onclick="copyHash('${escapeHtml(storedHash || '')}')" title="Click to copy">${escapeHtml(displayHash)}</div>
+            </div>
+            <div class="block-hash" style="margin-top:8px">
+              <div class="hash-label">Prev Hash</div>
+              <div class="hash-value prev" onclick="copyHash('${escapeHtml(previousHash)}')" title="Click to copy">${escapeHtml(shortHash(previousHash, 32))}</div>
+            </div>
+            ${!isVerified ? `
+            <div style="margin-top:10px;padding:10px;background:rgba(255,82,82,0.1);border-radius:8px;font-size:0.8rem;color:var(--red);">
+              ⚠️ <strong>Tamper Alert:</strong> Stored hash does not match computed hash. Record may have been modified.
+            </div>` : ''}
+          </div>
+        `;
+
+        // Connector between blocks (not after last one)
+        if (blockNum < docs.length) {
+          html += `<div class="block-connector"><div class="connector-line"></div></div>`;
+        }
+
+        previousHash = storedHash || previousHash;
+      }
+
+      html += `</div>`;
+      container.innerHTML = html;
+
+      // Update stats
+      document.getElementById('total-blocks').textContent = blockNum;
+      document.getElementById('verified-count').textContent = verifiedCount;
+      document.getElementById('tampered-count').textContent = tamperedCount;
+
+      if (tamperedCount > 0) {
+        showToast(`⚠️ ${tamperedCount} tampered record(s) detected!`, 'error');
+      } else if (blockNum > 0) {
+        showToast(`${blockNum} records verified`, 'success');
+      }
+
+    } catch (err) {
+      console.error('Build chain error:', err);
+      container.innerHTML = `
+        <div class="empty-blocks" style="color:var(--red);">
+          <div class="icon">⚠️</div>
+          <h3 style="font-family:'Syne';margin-bottom:8px;">Could not load chain</h3>
+          <p>${escapeHtml(err.message || 'Please refresh the page.')}</p>
+        </div>`;
+      showToast('Failed to load chain', 'error');
+    }
+  }
+
+  // ============ COPY HASH ============
+  window.copyHash = function(hash) {
+    if (!hash) return;
+    navigator.clipboard.writeText(hash).then(() => {
+      showToast('Hash copied to clipboard', 'success');
+    }).catch(() => {
+      showToast('Could not copy. Long-press to select.', 'info');
+    });
+  };
+
+  // ============ VERIFY HASH ============
+  window.verifyHash = function() {
+    const input = document.getElementById('verify-input').value.trim();
+    const result = document.getElementById('verify-result');
+    const btn = document.getElementById('verifyBtn');
+
+    if (!input) {
+      showToast('Please enter a hash to verify', 'error');
+      document.getElementById('verify-input').focus();
+      return;
+    }
+
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="btn-spinner"></span> Verifying...';
+
+    setTimeout(() => {
+      const normalizedInput = input.toLowerCase();
+      
+      // Check genesis
+      if (normalizedInput === '0x0000000000000000000000000000000000000000000000000000000000000000' 
+          || normalizedInput === '0x0000000000000000') {
+        result.className = 'verify-result info';
+        result.innerHTML = `ℹ️ <strong>Genesis Block</strong> — This is the starting block of your chain.`;
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        return;
+      }
+
+      // Search through user's blocks
+      const match = userBlocks.find(b => 
+        b.hash && b.hash.toLowerCase() === normalizedInput
+      );
+
+      if (match) {
+        result.className = 'verify-result success';
+        if (match.verified) {
+          result.innerHTML = `
+            ✅ <strong>Verified!</strong> This hash belongs to your chain and integrity is intact.
+            <div class="verify-result-details">
+              <strong>Block #${match.blockNum}:</strong> ${escapeHtml(match.reportName)}<br>
+              <strong>Date:</strong> ${escapeHtml(match.date)}<br>
+              <strong>Status:</strong> ${escapeHtml(match.status)}
+            </div>`;
+        } else {
+          result.className = 'verify-result fail';
+          result.innerHTML = `
+            ⚠️ <strong>Tamper Alert!</strong> This hash exists but the record has been modified.
+            <div class="verify-result-details">
+              <strong>Block #${match.blockNum}:</strong> ${escapeHtml(match.reportName)}<br>
+              Stored hash does not match the computed hash.
+            </div>`;
+        }
+      } else {
+        result.className = 'verify-result fail';
+        result.innerHTML = `❌ <strong>Not Found!</strong> This hash does not belong to any record in your chain.`;
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }, 600);  // Small delay for UX
+  };
+
+  // Enter key support
+  document.getElementById('verify-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      verifyHash();
+    }
+  });
+
+});
+</script>
+
+</body>
+</html>

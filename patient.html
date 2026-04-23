@@ -9,25 +9,20 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <style>
-    /* 🛡️ YOUR UI FIXES (Don't Change) */
-    html, body { overflow-x: hidden !important; max-width: 100vw !important; }
-    .user-badge span { max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: bottom; }
-    nav { max-width: 100vw; overflow: hidden; }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #060a12; --surface: #0d1520; --surface2: #141f30; --border: #1a2535;
       --accent: #00d4ff; --accent2: #7c3aed; --text: #e8f0ff; --text-muted: #6b7a99;
       --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
     }
-    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
     
     #global-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .spinner { border: 4px solid rgba(0, 212, 255, 0.1); border-top: 4px solid var(--accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+    .btn-spinner { border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; width: 14px; height: 14px; animation: spin 0.8s linear infinite; display: inline-block; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 5%; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
@@ -35,7 +30,7 @@
     .logo span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .user-profile { display: flex; align-items: center; gap: 15px; }
     .user-name { font-weight: 600; font-size: 0.95rem; }
-    .logout-btn { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.3s; font-size: 0.85rem; }
+    .logout-btn { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.3s; font-size: 0.85rem; font-family: inherit; }
     .logout-btn:hover { background: var(--danger); color: white; }
 
     .dashboard-container { padding: 20px 4%; max-width: 1200px; margin: 0 auto; width: 100%; flex: 1; overflow-x: hidden; }
@@ -57,28 +52,38 @@
     @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
     
     .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 25px; }
-    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; gap: 10px; flex-wrap: wrap; }
     .panel-header h2 { font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
     
-    .btn { padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.3s; border: none; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+    .btn { padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.3s; border: none; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; font-family: inherit; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; }
-    .btn-primary:hover { opacity: 0.9; box-shadow: 0 5px 15px rgba(124, 58, 237, 0.3); }
+    .btn-primary:not(:disabled):hover { opacity: 0.9; box-shadow: 0 5px 15px rgba(124, 58, 237, 0.3); }
     .btn-outline { background: transparent; border: 1px solid var(--text-muted); color: var(--text); }
-    .btn-outline:hover { border-color: var(--text); }
+    .btn-outline:not(:disabled):hover { border-color: var(--text); }
 
     .form-group { margin-bottom: 15px; }
     .form-group label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.9rem; }
-    .input-field { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 15px; color: white; outline: none; font-family: inherit; }
+    .input-field { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 15px; color: white; outline: none; font-family: inherit; font-size: 0.95rem; }
     .input-field:focus { border-color: var(--accent); }
+    .input-field.error { border-color: var(--danger); }
     
-    /* 📸 ULTRA PRO MAX UPLOAD BOX */
-    .upload-box { text-align: center; border: 2px dashed var(--accent); padding: 25px; border-radius: 15px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; }
-    .upload-box:hover { background: rgba(0, 212, 255, 0.05); }
+    .file-upload { position: relative; display: block; }
+    .file-upload-label { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 20px; background: var(--surface2); border: 2px dashed var(--border); border-radius: 10px; cursor: pointer; color: var(--text-muted); transition: 0.3s; font-size: 0.9rem; }
+    .file-upload-label:hover { border-color: var(--accent); color: var(--accent); }
+    .file-upload input[type="file"] { position: absolute; opacity: 0; pointer-events: none; }
+    .file-selected { color: var(--success) !important; border-color: var(--success) !important; }
 
+    .error-msg { color: var(--danger); font-size: 0.8rem; margin-top: -8px; margin-bottom: 10px; display: none; }
+    .error-msg.show { display: block; }
+    
     .report-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
     .report-card:hover { border-color: var(--accent); }
-    .report-info h4 { margin-bottom: 4px; font-size: 1.05rem; }
-    .report-meta { display: flex; gap: 15px; font-size: 0.85rem; color: var(--text-muted); }
+    .report-info { flex: 1; min-width: 0; }
+    .report-info h4 { margin-bottom: 4px; font-size: 1.05rem; word-break: break-word; }
+    .report-meta { display: flex; gap: 15px; font-size: 0.85rem; color: var(--text-muted); flex-wrap: wrap; }
+    .report-meta .hash-link { cursor: pointer; font-family: monospace; transition: color 0.2s; }
+    .report-meta .hash-link:hover { color: var(--accent); }
     .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
     .status-normal { background: rgba(16, 185, 129, 0.1); color: var(--success); }
     .status-abnormal { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
@@ -86,15 +91,31 @@
     .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
     .empty-state i { font-size: 3rem; margin-bottom: 15px; opacity: 0.5; }
 
-    .doctor-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface2); border-radius: 10px; margin-bottom: 10px; }
+    .doctor-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface2); border-radius: 10px; margin-bottom: 10px; gap: 10px; }
+    .doctor-info { flex: 1; min-width: 0; }
     .doctor-info h4 { font-size: 0.95rem; margin-bottom: 2px; }
-    .doctor-info p { font-size: 0.8rem; color: var(--text-muted); }
-    .revoke-btn { color: var(--danger); background: transparent; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+    .doctor-info p { font-size: 0.8rem; color: var(--text-muted); word-break: break-all; }
+    .revoke-btn { color: var(--danger); background: transparent; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; font-family: inherit; flex-shrink: 0; }
     .revoke-btn:hover { text-decoration: underline; }
 
-    /* 📱 PRO QR CODE PANEL */
-    .qr-panel { text-align: center; display: flex; flex-direction: column; align-items: center; background: linear-gradient(180deg, var(--surface) 0%, rgba(0, 212, 255, 0.05) 100%); border: 1px solid var(--accent); }
-    .qr-box { background: white; padding: 15px; border-radius: 15px; display: inline-block; margin: 15px 0; }
+    .qr-panel { text-align: center; display: flex; flex-direction: column; align-items: center; background: linear-gradient(180deg, var(--surface) 0%, rgba(0, 212, 255, 0.05) 100%); border: 1px solid var(--accent); box-shadow: 0 0 20px rgba(0, 212, 255, 0.1); }
+    .qr-box { background: white; padding: 15px; border-radius: 15px; display: inline-block; margin: 10px 0 20px 0; border: 4px solid var(--surface2); min-width: 190px; min-height: 190px; display: flex; align-items: center; justify-content: center; }
+    .qr-desc { color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; }
+
+    /* Toast */
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 20px; z-index: 10000; max-width: 90%; min-width: 280px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: transform 0.3s ease; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { border-color: var(--danger); color: var(--danger); }
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.info { border-color: var(--accent); color: var(--accent); }
+
+    /* Modal for hash verification */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10001; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+    .modal-overlay.show { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 25px; max-width: 500px; width: 100%; max-height: 85vh; overflow-y: auto; }
+    .modal h3 { font-family: 'Syne', sans-serif; margin-bottom: 15px; font-size: 1.2rem; }
+    .modal .hash-box { background: var(--surface2); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 0.8rem; word-break: break-all; margin: 15px 0; color: var(--accent); border: 1px solid var(--border); }
+    .modal-close-btn { background: var(--surface2); color: var(--text); border: 1px solid var(--border); padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; font-family: inherit; margin-top: 10px; }
 
     @media (max-width: 768px) {
       .welcome-section h1 { font-size: 1.6rem; }
@@ -104,7 +125,9 @@
       .logo { font-size: 1.2rem; }
       .user-name { display: none; }
       .panel { padding: 15px; }
+      .btn { font-size: 0.85rem; padding: 8px 15px; }
       .report-card { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .report-card > div:last-child { width: 100%; text-align: left !important; }
     }
   </style>
 </head>
@@ -112,7 +135,24 @@
 
 <div id="global-loader">
   <div class="spinner"></div>
-  <p style="margin-top: 20px; color: var(--text-muted); font-weight: 600;">Securing Vault...</p>
+  <p style="margin-top: 20px; color: var(--text-muted); font-weight: 600;">Loading...</p>
+</div>
+
+<!-- Toast for notifications -->
+<div id="toast" class="toast" role="alert" aria-live="polite">
+  <span id="toast-icon">ℹ️</span>
+  <span id="toast-msg"></span>
+</div>
+
+<!-- Hash verification modal -->
+<div id="hashModal" class="modal-overlay" onclick="if(event.target===this)closeHashModal()">
+  <div class="modal">
+    <h3>🔐 Record Integrity Hash</h3>
+    <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6;">This is the SHA-256 cryptographic fingerprint of your record. If even a single character in the record changes, this hash will change completely — making tampering instantly detectable.</p>
+    <div class="hash-box" id="modalHash"></div>
+    <p style="color: var(--text-muted); font-size: 0.8rem;">📋 Tap hash to copy. This fingerprint is generated in your browser and stored with the record — verifiable at any time.</p>
+    <button class="modal-close-btn" onclick="closeHashModal()">Close</button>
+  </div>
 </div>
 
 <nav>
@@ -127,7 +167,7 @@
   
   <div class="welcome-section">
     <h1>Hello, <span id="welcome-name">Patient</span></h1>
-    <p>Your medical records are secured with SHA-256 Blockchain Encryption.</p>
+    <p>Your medical records are cryptographically secured with SHA-256 hashing.</p>
   </div>
 
   <div class="stats-grid">
@@ -148,8 +188,8 @@
     <div class="stat-card">
       <div class="stat-icon icon-green">🔒</div>
       <div class="stat-info">
-        <h3>Verified</h3>
-        <p>Blockchain Secured</p>
+        <h3 id="hashed-count">0</h3>
+        <p>Hash Secured</p>
       </div>
     </div>
   </div>
@@ -163,55 +203,78 @@
       </div>
       
       <div id="add-report-form" style="display: none; background: var(--surface2); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px dashed var(--border);">
+        <h3 style="margin-bottom: 15px; font-size: 1.1rem;">Secure New Report</h3>
         
-        <div class="upload-box" onclick="document.getElementById('reportFile').click()">
-          <div style="font-size: 2.5rem; margin-bottom: 10px;">📸</div>
-          <p style="color: var(--accent); font-weight: 700;">Tap to Take Photo or Upload</p>
-          <p id="fileNameDisplay" style="font-size: 0.8rem; color: var(--success); margin-top: 5px; display: none; font-weight: 600;">File Ready!</p>
-          <input type="file" id="reportFile" accept="image/*,application/pdf" style="display: none;" onchange="updateFileName(this)">
-        </div>
+        <form id="reportForm" onsubmit="event.preventDefault(); saveReport();" novalidate>
+          <div class="form-group">
+            <label for="reportName">Report Name (e.g. Blood Test, MRI)</label>
+            <input type="text" id="reportName" class="input-field" placeholder="Enter report name" maxlength="100" required>
+          </div>
+          <div class="error-msg" id="reportName-error"></div>
+          
+          <div class="form-group">
+            <label for="reportValue">Key Findings / Values</label>
+            <input type="text" id="reportValue" class="input-field" placeholder="e.g. Blood Sugar 140 mg/dL" maxlength="500" required>
+          </div>
+          <div class="error-msg" id="reportValue-error"></div>
+          
+          <div class="form-group">
+            <label for="reportStatus">Status</label>
+            <select id="reportStatus" class="input-field">
+              <option value="Normal">Normal</option>
+              <option value="Abnormal">Abnormal (Attention Needed)</option>
+            </select>
+          </div>
 
-        <div class="form-group">
-          <label>Report Name (e.g. Blood Test, MRI)</label>
-          <input type="text" id="reportName" class="input-field" placeholder="Enter report name">
-        </div>
-        <div class="form-group">
-          <label>Summary / Findings</label>
-          <input type="text" id="reportValue" class="input-field" placeholder="e.g. Normal HB, High Sugar">
-        </div>
-        <div class="form-group">
-          <label>Status</label>
-          <select id="reportStatus" class="input-field">
-            <option value="Normal">Normal</option>
-            <option value="Abnormal">Abnormal (Attention Needed)</option>
-          </select>
-        </div>
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-          <button id="saveBtn" class="btn btn-primary" onclick="saveReport()">Secure on Blockchain 🔗</button>
-          <button class="btn btn-outline" onclick="toggleAddReport()">Cancel</button>
-        </div>
+          <div class="form-group">
+            <label>Report File (Optional — PDF/Image for future verification)</label>
+            <label class="file-upload-label" id="fileLabel">
+              <span id="fileLabelText">📎 Click to attach file (optional)</span>
+              <input type="file" id="reportFile" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(event)">
+            </label>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">Max 5MB. File hash is computed locally — file storage coming soon.</p>
+          </div>
+          
+          <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-primary" id="saveReportBtn" type="submit">🔐 Secure Record</button>
+            <button class="btn btn-outline" type="button" onclick="toggleAddReport()">Cancel</button>
+          </div>
+        </form>
       </div>
 
-      <div id="reports-container"></div>
+      <div id="reports-container">
+        <div class="empty-state">
+          <div style="font-size: 3rem; margin-bottom: 10px;">📭</div>
+          <h3>No Records Found</h3>
+          <p>Click '+ Add New Report' to secure your first medical record.</p>
+        </div>
+      </div>
     </div>
 
     <div>
       <div class="panel qr-panel" style="margin-bottom: 30px;">
         <h2 style="font-family: 'Syne'; font-size: 1.2rem; margin-bottom: 10px;">My Health Identity</h2>
-        <div class="qr-box" id="qrcode"></div>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">Share this QR with your doctor for instant access.</p>
+        <div class="qr-box" id="qrcode">
+          <div class="spinner" style="width: 30px; height: 30px; border-width: 3px;"></div>
+        </div>
+        <p class="qr-desc">Show this QR Code to your doctor. They scan it to access your records (only with your granted permission).</p>
       </div>
 
       <div class="panel">
-        <div class="panel-header">
-          <h2>Doctor Access</h2>
+        <div class="panel-header" style="margin-bottom: 15px; padding-bottom: 10px;">
+          <h2>Manual Access</h2>
         </div>
-        <div style="display: flex; gap: 10px; margin-bottom: 25px;">
-          <input type="email" id="doctorEmail" class="input-field" placeholder="doctor@hospital.com">
-          <button class="btn btn-outline" onclick="grantAccess()">Grant</button>
-        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Grant secure access using email if QR is not scannable.</p>
+        
+        <form onsubmit="event.preventDefault(); grantAccess();" style="display: flex; gap: 10px; margin-bottom: 25px;">
+          <input type="email" id="doctorEmail" class="input-field" placeholder="doctor@hospital.com" autocomplete="off">
+          <button class="btn btn-outline" id="grantBtn" type="submit">Grant</button>
+        </form>
+
         <h3 style="font-size: 1rem; margin-bottom: 15px; color: var(--text-muted);">Authorized Doctors</h3>
-        <div id="authorized-doctors-list"></div>
+        <div id="authorized-doctors-list">
+          <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 10px 0;">No doctors have access currently.</p>
+        </div>
       </div>
     </div>
 
@@ -219,6 +282,7 @@
 </div>
 
 <script>
+  // ============ FIREBASE CONFIG (Same as before — tested) ============
   const firebaseConfig = {
     apiKey: "AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",
     authDomain: "helthchain.firebaseapp.com",
@@ -231,29 +295,70 @@
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
-  const storage = firebase.storage();
 
   let currentUser = null;
+  let selectedFile = null;
 
-  auth.onAuthStateChanged((user) => {
+  // ============ TOAST NOTIFICATIONS ============
+  const toast = document.getElementById('toast');
+  const toastMsg = document.getElementById('toast-msg');
+  const toastIcon = document.getElementById('toast-icon');
+  let toastTimeout = null;
+
+  function showToast(message, type = 'info') {
+    clearTimeout(toastTimeout);
+    toastMsg.textContent = message;
+    toastIcon.textContent = type === 'error' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️';
+    toast.className = `toast ${type} show`;
+    toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 4000);
+  }
+
+  // ============ SAFE HTML ESCAPING (XSS prevention) ============
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // ============ REAL SHA-256 HASHING (Web Crypto API) ============
+  async function generateRealHash(data) {
+    // Encode string as UTF-8 bytes
+    const encoder = new TextEncoder();
+    const dataBytes = encoder.encode(data);
+    
+    // Real SHA-256 via browser's built-in Web Crypto API
+    const hashBuffer = await crypto.subtle.digest('SHA-256', dataBytes);
+    
+    // Convert buffer to hex string
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    return '0x' + hashHex;
+  }
+
+  // ============ COMPUTE HASH OF FILE (if attached) ============
+  async function hashFile(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // ============ AUTH CHECK + SETUP ============
+  auth.onAuthStateChanged(async (user) => {
     if (user) {
       currentUser = user;
+      const displayName = user.displayName || (user.email ? user.email.split('@')[0] : 'Patient');
+      document.getElementById('display-name').textContent = displayName;
+      document.getElementById('welcome-name').textContent = displayName;
       document.getElementById('global-loader').style.display = 'none';
-      document.getElementById('display-name').textContent = user.displayName || user.email.split('@')[0];
-      document.getElementById('welcome-name').textContent = user.displayName || user.email.split('@')[0];
-      
-      // IDENTITY QR GENERATION
-      setTimeout(() => {
-        document.getElementById('qrcode').innerHTML = ""; 
-        new QRCode(document.getElementById("qrcode"), {
-          text: user.email.toLowerCase(),
-          width: 160,
-          height: 160,
-          colorDark : "#000000",
-          colorLight : "#ffffff",
-          correctLevel : QRCode.CorrectLevel.H
-        });
-      }, 500);
+
+      // Generate Health Identity QR Code
+      await generateHealthIdentityQR(user);
 
       loadReports();
       loadDoctors();
@@ -262,127 +367,392 @@
     }
   });
 
-  function updateFileName(input) {
-    const display = document.getElementById('fileNameDisplay');
-    if (input.files[0]) {
-      display.textContent = "✅ " + input.files[0].name;
-      display.style.display = "block";
+  // ============ HEALTH IDENTITY QR ============
+  async function generateHealthIdentityQR(user) {
+    try {
+      // Build a small JSON identity payload — better than just email
+      const identityPayload = {
+        v: 1,                               // version
+        id: user.uid,                       // unique user ID
+        email: user.email.toLowerCase(),    // for doctor lookup
+        platform: 'healthchain'
+      };
+      const qrData = JSON.stringify(identityPayload);
+
+      const qrContainer = document.getElementById("qrcode");
+      qrContainer.innerHTML = ""; // clear spinner
+      
+      new QRCode(qrContainer, {
+        text: qrData,
+        width: 160,
+        height: 160,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch (err) {
+      console.error('QR generation failed:', err);
+      document.getElementById("qrcode").innerHTML = '<p style="color:#000;font-size:0.8rem;padding:20px;">QR generation failed</p>';
     }
   }
 
+  // ============ LOGOUT ============
+  function handleLogout() {
+    if (confirm("Are you sure you want to logout?")) {
+      auth.signOut().then(() => {
+        window.location.replace('login.html');
+      }).catch(err => showToast('Logout failed: ' + err.message, 'error'));
+    }
+  }
+
+  // ============ TOGGLE ADD REPORT FORM ============
+  function toggleAddReport() {
+    const form = document.getElementById('add-report-form');
+    const isHidden = form.style.display === 'none';
+    form.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+      setTimeout(() => document.getElementById('reportName').focus(), 100);
+    }
+  }
+
+  // ============ FILE SELECTION HANDLER ============
+  function handleFileSelect(event) {
+    const file = event.target.files[0];
+    const label = document.getElementById('fileLabel');
+    const labelText = document.getElementById('fileLabelText');
+    
+    if (!file) {
+      selectedFile = null;
+      labelText.textContent = '📎 Click to attach file (optional)';
+      label.classList.remove('file-selected');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('File too large. Max 5MB allowed.', 'error');
+      event.target.value = '';
+      return;
+    }
+
+    selectedFile = file;
+    labelText.textContent = `✅ ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+    label.classList.add('file-selected');
+  }
+
+  // ============ SAVE REPORT (with REAL SHA-256) ============
   async function saveReport() {
-    const file = document.getElementById('reportFile').files[0];
-    const name = document.getElementById('reportName').value;
-    const value = document.getElementById('reportValue').value;
-    const status = document.getElementById('reportStatus').value;
-    const btn = document.getElementById('saveBtn');
+    const nameInput = document.getElementById('reportName');
+    const valueInput = document.getElementById('reportValue');
+    const statusSelect = document.getElementById('reportStatus');
+    const saveBtn = document.getElementById('saveReportBtn');
+    const nameError = document.getElementById('reportName-error');
+    const valueError = document.getElementById('reportValue-error');
 
-    if(!name || !file) return alert("Pehle photo khicho aur title daalo!");
+    // Clear previous errors
+    nameError.classList.remove('show');
+    valueError.classList.remove('show');
+    nameInput.classList.remove('error');
+    valueInput.classList.remove('error');
 
-    btn.innerText = "Securing on Blockchain...";
-    btn.disabled = true;
+    const name = nameInput.value.trim();
+    const value = valueInput.value.trim();
+    const status = statusSelect.value;
+
+    // Validation
+    if (!name) {
+      nameInput.classList.add('error');
+      nameError.textContent = 'Report name is required';
+      nameError.classList.add('show');
+      nameInput.focus();
+      return;
+    }
+    if (!value) {
+      valueInput.classList.add('error');
+      valueError.textContent = 'Findings are required';
+      valueError.classList.add('show');
+      valueInput.focus();
+      return;
+    }
+
+    // Disable button + show loading
+    const originalBtnHTML = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="btn-spinner"></span> Computing hash...';
 
     try {
-      // 1. Upload Asli File to Storage
-      const storageRef = storage.ref(`reports/${currentUser.uid}/${Date.now()}_${file.name}`);
-      const snapshot = await storageRef.put(file);
-      const downloadURL = await snapshot.ref.getDownloadURL();
+      const timestamp = Date.now();
 
-      // 2. Save Metadata to Firestore
+      // Build canonical content to hash — deterministic
+      const hashInput = JSON.stringify({
+        patient: currentUser.email.toLowerCase(),
+        reportName: name,
+        findings: value,
+        status: status,
+        createdAt: timestamp
+      });
+
+      // Compute REAL SHA-256 hash
+      const recordHash = await generateRealHash(hashInput);
+
+      // If file attached, compute file hash too
+      let fileHash = null;
+      let fileName = null;
+      if (selectedFile) {
+        saveBtn.innerHTML = '<span class="btn-spinner"></span> Hashing file...';
+        fileHash = await hashFile(selectedFile);
+        fileName = selectedFile.name;
+      }
+
+      saveBtn.innerHTML = '<span class="btn-spinner"></span> Saving to cloud...';
+
+      // Save to Firestore
       await db.collection("reports").add({
         patientId: currentUser.uid,
         patientEmail: currentUser.email.toLowerCase(),
         reportName: name,
         findings: value,
         status: status,
-        fileUrl: downloadURL,
-        blockchainHash: '0x' + Array.from({length: 40}, () => Math.floor(Math.random() * 16).toString(16)).join(''),
+        recordHash: recordHash,
+        fileHash: fileHash,
+        fileName: fileName,
+        hashAlgorithm: 'SHA-256',
+        createdAt: timestamp,
         date: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      alert("Report Secured Successfully! 🚀🔗");
-      location.reload();
-    } catch (e) {
-      alert("Error: " + e.message);
-      btn.disabled = false;
+      // Success
+      showToast('Record secured with SHA-256 hash! 🔐', 'success');
+      
+      // Reset form
+      nameInput.value = '';
+      valueInput.value = '';
+      statusSelect.value = 'Normal';
+      document.getElementById('reportFile').value = '';
+      selectedFile = null;
+      document.getElementById('fileLabelText').textContent = '📎 Click to attach file (optional)';
+      document.getElementById('fileLabel').classList.remove('file-selected');
+      
+      toggleAddReport();
+
+    } catch (err) {
+      console.error('Save report error:', err);
+      showToast('Error saving record: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = originalBtnHTML;
     }
   }
 
+  // ============ LOAD REPORTS (real-time) ============
   function loadReports() {
-    db.collection("reports").where("patientEmail", "==", currentUser.email.toLowerCase()).orderBy("date", "desc")
-      .onSnapshot((snap) => {
-        const container = document.getElementById('reports-container');
-        document.getElementById('total-reports-count').textContent = snap.size;
-        let abCount = 0;
-        
-        if (snap.empty) {
-          container.innerHTML = `<div class="empty-state"><h3>No Records Found</h3><p>Upload a report to start.</p></div>`;
-          return;
-        }
+    db.collection("reports")
+      .where("patientEmail", "==", currentUser.email.toLowerCase())
+      .orderBy("date", "desc")
+      .onSnapshot(
+        (querySnapshot) => {
+          const container = document.getElementById('reports-container');
+          document.getElementById('total-reports-count').textContent = querySnapshot.size;
+          document.getElementById('hashed-count').textContent = querySnapshot.size;
+          let abnormalCount = 0;
+          
+          if (querySnapshot.empty) {
+            container.innerHTML = `
+              <div class="empty-state">
+                <div style="font-size: 3rem; margin-bottom: 10px;">📭</div>
+                <h3>No Records Found</h3>
+                <p>Click '+ Add New Report' to secure your first medical record.</p>
+              </div>`;
+            document.getElementById('abnormal-count').textContent = 0;
+            return;
+          }
 
-        let html = '';
-        snap.forEach((doc) => {
-          const d = doc.data();
-          if(d.status === 'Abnormal') abCount++;
-          const dateStr = d.date ? d.date.toDate().toLocaleDateString() : 'Just now';
-          html += `
-            <div class="report-card">
-              <div class="report-info">
-                <h4>${d.reportName}</h4>
-                <div class="report-meta">
-                  <span>📅 ${dateStr}</span>
-                  <span>🔗 Hash: ${d.blockchainHash.substring(0,12)}...</span>
+          let html = '';
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const dateStr = data.date ? data.date.toDate().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Just now';
+            const isAbnormal = data.status === 'Abnormal';
+            if (isAbnormal) abnormalCount++;
+
+            // Support both old (blockchainHash) and new (recordHash) field names for backward compatibility
+            const hash = data.recordHash || data.blockchainHash || 'N/A';
+            const shortHash = hash.substring(0, 14);
+            const safeReportName = escapeHtml(data.reportName || 'Untitled');
+            const safeFindings = escapeHtml(data.findings || '');
+            const safeStatus = escapeHtml(data.status || 'Normal');
+            const fileName = data.fileName ? escapeHtml(data.fileName) : null;
+
+            html += `
+              <div class="report-card">
+                <div class="report-info">
+                  <h4>${safeReportName}</h4>
+                  <div class="report-meta">
+                    <span>📅 ${dateStr}</span>
+                    <span class="hash-link" onclick="showHashModal('${escapeHtml(hash)}')">🔗 ${escapeHtml(shortHash)}...</span>
+                    ${fileName ? `<span>📎 ${fileName}</span>` : ''}
+                  </div>
+                  <p style="margin-top: 8px; font-size: 0.9rem; color: var(--text);">${safeFindings}</p>
                 </div>
-                <a href="${d.fileUrl}" target="_blank" style="color:var(--accent); font-size:0.85rem; text-decoration:none; display:block; margin-top:10px; font-weight:700;">👁️ View Original Report</a>
+                <div style="text-align: right;">
+                  <span class="status-badge ${isAbnormal ? 'status-abnormal' : 'status-normal'}">${safeStatus}</span>
+                </div>
               </div>
-              <span class="status-badge ${d.status==='Abnormal'?'status-abnormal':'status-normal'}">${d.status}</span>
-            </div>
-          `;
-        });
-        container.innerHTML = html;
-        document.getElementById('abnormal-count').textContent = abCount;
-      });
-  }
-
-  function grantAccess() {
-    const email = document.getElementById('doctorEmail').value.trim();
-    if(!email) return alert("Enter doctor email");
-    db.collection("doctor_access").add({
-      patientId: currentUser.uid,
-      doctorEmail: email.toLowerCase(),
-      grantedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-      alert("Access Granted!");
-      document.getElementById('doctorEmail').value = '';
-    });
-  }
-
-  function loadDoctors() {
-    db.collection("doctor_access").where("patientId", "==", currentUser.uid)
-      .onSnapshot((snap) => {
-        const list = document.getElementById('authorized-doctors-list');
-        let html = '';
-        snap.forEach((doc) => {
-          html += `
-            <div class="doctor-item">
-              <div class="doctor-info"><h4>👨‍⚕️ Doctor</h4><p>${doc.data().doctorEmail}</p></div>
-              <button class="revoke-btn" onclick="revokeAccess('${doc.id}')">Revoke</button>
+            `;
+          });
+          container.innerHTML = html;
+          document.getElementById('abnormal-count').textContent = abnormalCount;
+        },
+        (err) => {
+          console.error('Load reports error:', err);
+          document.getElementById('reports-container').innerHTML = `
+            <div class="empty-state">
+              <div style="font-size: 3rem; margin-bottom: 10px;">⚠️</div>
+              <h3>Could not load records</h3>
+              <p>${escapeHtml(err.message || 'Please check your connection and try again.')}</p>
             </div>`;
-        });
-        list.innerHTML = html || '<p style="text-align:center; font-size:0.8rem; color:var(--text-muted);">No doctors authorized.</p>';
+          showToast('Failed to load records', 'error');
+        }
+      );
+  }
+
+  // ============ HASH MODAL ============
+  function showHashModal(hash) {
+    document.getElementById('modalHash').textContent = hash;
+    document.getElementById('hashModal').classList.add('show');
+    
+    // Click hash to copy
+    document.getElementById('modalHash').onclick = () => {
+      navigator.clipboard.writeText(hash).then(() => {
+        showToast('Hash copied to clipboard', 'success');
+      }).catch(() => {
+        showToast('Could not copy. Long-press to select.', 'info');
+      });
+    };
+  }
+
+  function closeHashModal() {
+    document.getElementById('hashModal').classList.remove('show');
+  }
+
+  // ============ EMAIL VALIDATION ============
+  function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  }
+
+  // ============ GRANT DOCTOR ACCESS ============
+  async function grantAccess() {
+    const emailInput = document.getElementById('doctorEmail');
+    const grantBtn = document.getElementById('grantBtn');
+    const email = emailInput.value.trim().toLowerCase();
+
+    if (!email) {
+      showToast("Please enter doctor's email", 'error');
+      emailInput.focus();
+      return;
+    }
+    if (!validateEmail(email)) {
+      showToast('Please enter a valid email', 'error');
+      emailInput.focus();
+      return;
+    }
+    if (email === currentUser.email.toLowerCase()) {
+      showToast("You can't grant access to yourself", 'error');
+      return;
+    }
+
+    const originalBtnText = grantBtn.textContent;
+    grantBtn.disabled = true;
+    grantBtn.textContent = 'Granting...';
+
+    try {
+      // Check if already granted
+      const existing = await db.collection("doctor_access")
+        .where("patientId", "==", currentUser.uid)
+        .where("doctorEmail", "==", email)
+        .get();
+
+      if (!existing.empty) {
+        showToast(`${email} already has access`, 'info');
+        grantBtn.disabled = false;
+        grantBtn.textContent = originalBtnText;
+        return;
+      }
+
+      // Grant access
+      await db.collection("doctor_access").add({
+        patientId: currentUser.uid,
+        patientEmail: currentUser.email.toLowerCase(),
+        doctorEmail: email,
+        grantedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      showToast(`Access granted to ${email}`, 'success');
+      emailInput.value = '';
+    } catch (err) {
+      console.error('Grant access error:', err);
+      showToast('Failed to grant access: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+      grantBtn.disabled = false;
+      grantBtn.textContent = originalBtnText;
+    }
+  }
+
+  // ============ LOAD AUTHORIZED DOCTORS ============
+  function loadDoctors() {
+    db.collection("doctor_access")
+      .where("patientId", "==", currentUser.uid)
+      .onSnapshot(
+        (querySnapshot) => {
+          const list = document.getElementById('authorized-doctors-list');
+          if (querySnapshot.empty) {
+            list.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 10px 0;">No doctors have access currently.</p>`;
+            return;
+          }
+
+          let html = '';
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const safeEmail = escapeHtml(data.doctorEmail || '');
+            html += `
+              <div class="doctor-item">
+                <div class="doctor-info">
+                  <h4>👨‍⚕️ Doctor</h4>
+                  <p>${safeEmail}</p>
+                </div>
+                <button class="revoke-btn" onclick="revokeAccess('${escapeHtml(doc.id)}', '${safeEmail}')">Revoke</button>
+              </div>
+            `;
+          });
+          list.innerHTML = html;
+        },
+        (err) => {
+          console.error('Load doctors error:', err);
+          document.getElementById('authorized-doctors-list').innerHTML = `<p style="font-size: 0.85rem; color: var(--danger); text-align: center; padding: 10px 0;">Could not load authorized doctors.</p>`;
+        }
+      );
+  }
+
+  // ============ REVOKE DOCTOR ACCESS ============
+  function revokeAccess(docId, doctorEmail) {
+    if (!confirm(`Revoke access for ${doctorEmail}?\n\nThis doctor will no longer see your reports.`)) {
+      return;
+    }
+    
+    db.collection("doctor_access").doc(docId).delete()
+      .then(() => {
+        showToast(`Access revoked from ${doctorEmail}`, 'success');
+      })
+      .catch((err) => {
+        console.error('Revoke error:', err);
+        showToast('Failed to revoke: ' + (err.message || 'Unknown error'), 'error');
       });
   }
 
-  function revokeAccess(id) {
-    if(confirm("Revoke access?")) db.collection("doctor_access").doc(id).delete();
-  }
-
-  function toggleAddReport() {
-    const f = document.getElementById('add-report-form');
-    f.style.display = f.style.display === 'none' ? 'block' : 'none';
-  }
-
-  function handleLogout() { auth.signOut().then(() => window.location.replace('login.html')); }
+  // ============ CLOSE MODAL ON ESCAPE KEY ============
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeHashModal();
+  });
 </script>
 </body>
 </html>

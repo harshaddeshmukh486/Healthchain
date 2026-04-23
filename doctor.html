@@ -10,28 +10,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-  /* 1. पेज को दाएँ-बाएँ खिसकने से रोकने के लिए */
-html, body {
-  overflow-x: hidden !important;
-  max-width: 100vw !important;
-}
-
-/* 2. लंबे नाम को स्क्रीन से बाहर जाने से रोकने के लिए */
-.user-badge span {
-  max-width: 90px; /* इससे ज्यादा बड़ा नाम नहीं दिखेगा */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis; /* लंबे नाम के आगे ... लगा देगा */
-  display: inline-block;
-  vertical-align: bottom;
-}
-
-/* 3. Navbar को एकदम फिक्स करने के लिए */
-nav {
-  max-width: 100vw;
-  overflow: hidden;
-}
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #060a12; --surface: #0d1520; --border: #1a2535;
@@ -45,7 +23,7 @@ nav {
     .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
     .user-badge { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 50px; padding: 6px 14px; font-size: 0.85rem; }
     .user-avatar { width: 28px; height: 28px; background: linear-gradient(135deg, #00e676, #00bcd4); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; color: #000; }
-    .logout-btn { color: var(--red); background: rgba(255,82,82,0.1); border: 1px solid rgba(255,82,82,0.3); padding: 5px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; margin-left: 5px; }
+    .logout-btn { color: var(--red); background: rgba(255,82,82,0.1); border: 1px solid rgba(255,82,82,0.3); padding: 5px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; margin-left: 5px; font-family: inherit; }
     .container { max-width: 900px; margin: 0 auto; padding: 24px 20px 100px; }
     .welcome { margin-bottom: 28px; animation: fadeUp 0.4s ease; }
     .welcome h1 { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
@@ -59,11 +37,20 @@ nav {
     .search-row { display: flex; gap: 12px; margin-top: 15px; }
     .input-field { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; transition: border-color 0.2s; flex: 1; outline: none; }
     .input-field:focus { border-color: var(--accent); }
-    .search-btn { background: var(--accent); color: #000; border: none; padding: 11px 22px; border-radius: 10px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .input-field.error { border-color: var(--red); }
+    .search-btn { background: var(--accent); color: #000; border: none; padding: 11px 22px; border-radius: 10px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; }
+    .search-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .scan-btn { width: 100%; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; padding: 16px; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 5px 20px rgba(0,212,255,0.25); transition: 0.3s; position: relative; overflow: hidden; }
     .scan-btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); animation: shimmer 2.5s infinite; }
     @keyframes shimmer { 0%{left:-100%} 100%{left:100%} }
     .scan-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,212,255,0.4); }
+    .btn-spinner { border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; width: 14px; height: 14px; animation: spin 0.8s linear infinite; display: inline-block; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* ACCESS DENIED CARD */
+    .access-denied { display: none; background: rgba(255,82,82,0.08); border: 1px solid rgba(255,82,82,0.3); border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 24px; }
+    .access-denied h3 { color: var(--red); font-family: 'Syne', sans-serif; margin-bottom: 10px; font-size: 1.1rem; }
+    .access-denied p { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
 
     /* CYBERPUNK SCANNER */
     #scanner-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(3,6,15,0.97); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(10px); }
@@ -97,34 +84,46 @@ nav {
 
     /* PATIENT CARD */
     .patient-card { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 24px; animation: fadeUp 0.5s ease; }
-    .patient-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-    .patient-info { display: flex; align-items: center; gap: 14px; }
-    .patient-avatar { width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
-    .patient-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; }
+    .patient-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); gap: 10px; flex-wrap: wrap; }
+    .patient-info { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+    .patient-avatar { width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+    .patient-details { min-width: 0; flex: 1; }
+    .patient-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; word-break: break-word; }
     .patient-meta { font-size: 0.82rem; color: var(--muted); margin-top: 3px; }
     .values-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+    @media (max-width: 500px) { .values-grid { grid-template-columns: 1fr; } }
     .value-item { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
-    .value-label { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; font-weight: bold; }
-    .value-num { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; }
+    .value-label { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; font-weight: bold; word-break: break-word; }
+    .value-num { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; word-break: break-word; }
     .value-num.abnormal { color: var(--red); }
     .value-num.normal { color: var(--green); }
     .value-range { font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
+    .value-hash { font-size: 0.7rem; color: var(--muted); margin-top: 6px; font-family: monospace; opacity: 0.6; }
     .rx-section { background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.2); border-radius: 16px; padding: 16px; margin-bottom: 20px; }
-    .mic-btn { background: linear-gradient(135deg, #ff5252, #ff1744); color: white; border: none; padding: 10px 20px; border-radius: 50px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .rx-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+    .mic-btn { background: linear-gradient(135deg, #ff5252, #ff1744); color: white; border: none; padding: 10px 20px; border-radius: 50px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: inherit; font-size: 0.9rem; }
     .mic-btn.recording { animation: pulse 1s infinite; }
-    .whatsapp-btn { background: #25D366; color: white; border: none; padding: 10px 20px; border-radius: 50px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-    .ai-brief-btn { width: 100%; background: linear-gradient(135deg, var(--accent2), var(--accent)); color: #fff; border: none; padding: 13px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-bottom: 14px; }
+    .mic-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .whatsapp-btn { background: #25D366; color: white; border: none; padding: 10px 20px; border-radius: 50px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: inherit; font-size: 0.9rem; }
+    .lang-select { background: var(--bg); border: 1px solid var(--border); border-radius: 50px; padding: 8px 14px; color: var(--text); font-family: inherit; font-size: 0.85rem; cursor: pointer; outline: none; }
+    .lang-select:focus { border-color: var(--accent); }
+    .ai-brief-btn { width: 100%; background: linear-gradient(135deg, var(--accent2), var(--accent)); color: #fff; border: none; padding: 13px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .ai-brief-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .ai-brief-result { background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.2); border-radius: 14px; padding: 16px; font-size: 0.88rem; line-height: 1.7; color: var(--text); display: none; }
     .ai-brief-result.show { display: block; }
     .ai-brief-result h4 { font-family: 'Syne', sans-serif; font-weight: 700; margin-bottom: 10px; color: #a78bfa; }
+    .ai-brief-result strong { color: var(--accent); font-weight: 700; }
+    .ai-brief-result ul { margin: 10px 0; padding-left: 20px; }
+    .ai-brief-result li { margin-bottom: 6px; }
 
     /* API KEY BANNER */
     .api-setup-banner { background: rgba(255,193,7,0.08); border: 1px solid rgba(255,193,7,0.3); border-radius: 14px; padding: 16px; margin-bottom: 20px; display: none; }
     .api-setup-banner h4 { color: var(--yellow); font-family: 'Syne', sans-serif; margin-bottom: 8px; font-size: 0.9rem; }
-    .api-setup-banner p { color: var(--muted); font-size: 0.82rem; margin-bottom: 10px; }
+    .api-setup-banner p { color: var(--muted); font-size: 0.82rem; margin-bottom: 10px; line-height: 1.5; }
+    .api-setup-banner a { color: var(--accent); text-decoration: none; }
     .api-key-input { width: 100%; background: var(--bg); border: 1px solid rgba(255,193,7,0.3); border-radius: 10px; padding: 10px 14px; color: var(--text); font-family: monospace; font-size: 0.85rem; outline: none; margin-bottom: 10px; }
     .api-key-input:focus { border-color: var(--yellow); }
-    .save-key-btn { background: var(--yellow); color: #000; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.88rem; }
+    .save-key-btn { background: var(--yellow); color: #000; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.88rem; font-family: inherit; }
 
     .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(6,10,18,0.95); backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 16px; }
     .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--muted); font-size: 0.7rem; transition: color 0.2s; padding: 4px 16px; }
@@ -132,9 +131,23 @@ nav {
     .nav-icon { font-size: 1.3rem; }
     @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
     @keyframes pulse { 0%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,82,82,0.7)} 70%{transform:scale(1.05);box-shadow:0 0 0 10px rgba(255,82,82,0)} 100%{transform:scale(1)} }
+
+    /* Toast notifications */
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 20px; z-index: 10000; max-width: 90%; min-width: 280px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: transform 0.3s ease; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { border-color: var(--red); color: var(--red); }
+    .toast.success { border-color: var(--green); color: var(--green); }
+    .toast.info { border-color: var(--accent); color: var(--accent); }
+    .toast.warning { border-color: var(--yellow); color: var(--yellow); }
   </style>
 </head>
 <body>
+
+<!-- Toast notifications -->
+<div id="toast" class="toast" role="alert" aria-live="polite">
+  <span id="toast-icon">ℹ️</span>
+  <span id="toast-msg"></span>
+</div>
 
 <nav>
   <a href="index.html" class="logo"><div class="logo-icon">⛓</div>HealthChain</a>
@@ -173,13 +186,13 @@ nav {
 <div class="container">
   <div class="welcome">
     <h1>Doctor <span>Dashboard</span> 👨‍⚕️</h1>
-    <p>Scan QR code, View Reports & Dictate Prescriptions.</p>
+    <p>Scan QR code, view authorized patient records, dictate prescriptions.</p>
   </div>
 
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-num" id="total-patients">0</div><div class="stat-label">My Patients</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--yellow)">!</div><div class="stat-label">Smart AI</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--green)">✓</div><div class="stat-label">Secured</div></div>
+    <div class="stat-card"><div class="stat-num" id="total-patients">0</div><div class="stat-label">Patients Served</div></div>
+    <div class="stat-card"><div class="stat-num" id="total-records" style="color:var(--yellow)">0</div><div class="stat-label">Records Viewed</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--green)">✓</div><div class="stat-label">Verified</div></div>
   </div>
 
   <div class="search-card">
@@ -187,22 +200,28 @@ nav {
       <span style="font-size:1.2rem">📷</span> Scan Patient QR Code
     </button>
     <div style="text-align:center;margin:15px 0;color:var(--muted);font-size:0.85rem;">— OR MANUAL SEARCH —</div>
-    <div class="search-row">
-      <input type="email" class="input-field" id="search-input" placeholder="Enter patient email..."/>
-      <button class="search-btn" onclick="manualSearch()">Search</button>
-    </div>
+    <form onsubmit="event.preventDefault(); manualSearch();" class="search-row">
+      <input type="email" class="input-field" id="search-input" placeholder="Enter patient email..." autocomplete="off"/>
+      <button class="search-btn" id="search-btn" type="submit">Search</button>
+    </form>
+  </div>
+
+  <!-- Access Denied card -->
+  <div class="access-denied" id="access-denied">
+    <h3>🔒 Access Not Granted</h3>
+    <p id="access-denied-msg">This patient has not granted you access to view their records. Ask the patient to grant access from their dashboard.</p>
   </div>
 
   <div class="patient-card" id="patient-section">
     <div class="patient-header">
       <div class="patient-info">
         <div class="patient-avatar">👤</div>
-        <div>
+        <div class="patient-details">
           <div class="patient-name" id="display-email">Patient Name</div>
-          <div class="patient-meta">Blockchain Secured Profile</div>
+          <div class="patient-meta">Authorized access — Records integrity verified</div>
         </div>
       </div>
-      <span style="background:rgba(0,230,118,0.1);color:var(--green);border:1px solid rgba(0,230,118,0.3);padding:4px 12px;border-radius:50px;font-size:0.75rem;font-weight:700;">✅ Verified</span>
+      <span style="background:rgba(0,230,118,0.1);color:var(--green);border:1px solid rgba(0,230,118,0.3);padding:4px 12px;border-radius:50px;font-size:0.75rem;font-weight:700;">✅ Authorized</span>
     </div>
 
     <h4 style="margin-bottom:14px;font-size:0.95rem;color:var(--muted);">📊 Medical Findings</h4>
@@ -212,24 +231,29 @@ nav {
 
     <div class="rx-section">
       <h4 style="margin-bottom:12px;font-size:0.9rem;">🎙️ Smart E-Prescription</h4>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
-        <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤 Tap to Dictate</button>
-        <button class="whatsapp-btn" onclick="sendToWhatsApp()">📲 Send to WhatsApp</button>
+      <div class="rx-toolbar">
+        <button class="mic-btn" id="micBtn" onclick="toggleMic()" type="button">🎤 Tap to Dictate</button>
+        <select class="lang-select" id="lang-select" onchange="updateLanguage()" aria-label="Voice language">
+          <option value="en-IN">🇬🇧 English</option>
+          <option value="hi-IN">🇮🇳 हिंदी</option>
+          <option value="mr-IN">🇮🇳 मराठी</option>
+        </select>
+        <button class="whatsapp-btn" onclick="sendToWhatsApp()" type="button">📲 Send via WhatsApp</button>
       </div>
       <textarea id="rx-box" class="input-field" style="width:100%;height:80px;resize:none;" placeholder="Tap mic and dictate prescription..."></textarea>
     </div>
 
     <div class="api-setup-banner" id="api-banner">
-      <h4>🔑 Gemini API Key Setup</h4>
-      <p>AI Brief ke liye apni Gemini API key daalo. Key sirf is device pe save hogi — koi server nahi jaayegi.</p>
-      <input type="text" class="api-key-input" id="api-key-input" placeholder="AIzaSy... (Apni Gemini API Key yahan paste karo)"/>
-      <button class="save-key-btn" onclick="saveApiKey()">💾 Save Key</button>
+      <h4>🔑 Gemini AI Setup</h4>
+      <p>AI Brief ke liye free Gemini API key chahiye. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Get free key here →</a><br>Key sirf is device pe save hogi — server pe nahi jaayegi.</p>
+      <input type="text" class="api-key-input" id="api-key-input" placeholder="AIzaSy... (Paste your Gemini API Key)"/>
+      <button class="save-key-btn" onclick="saveApiKey()" type="button">💾 Save Key</button>
     </div>
 
-    <button class="ai-brief-btn" onclick="generateBrief()">🤖 Generate AI Doctor Brief</button>
+    <button class="ai-brief-btn" id="aiBriefBtn" onclick="generateBrief()" type="button">🤖 Generate AI Clinical Brief</button>
     <div class="ai-brief-result" id="ai-brief">
-      <h4>🤖 AI Doctor Brief</h4>
-      <p>Patient records fetched from Blockchain. AI analysis ready.</p>
+      <h4>🤖 AI Clinical Brief</h4>
+      <p>Analysis will appear here.</p>
     </div>
   </div>
 </div>
@@ -242,10 +266,11 @@ nav {
 <script>
 window.addEventListener('load', function() {
   if (typeof firebase === 'undefined') {
-    alert("⚠️ Firebase load nahi hua! Page refresh karo.");
+    showToast("Firebase load failed. Please refresh.", 'error');
     return;
   }
 
+  // ============ FIREBASE (same as before) ============
   const firebaseConfig = {
     apiKey: "AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",
     authDomain: "helthchain.firebaseapp.com",
@@ -259,11 +284,49 @@ window.addEventListener('load', function() {
   const auth = firebase.auth();
   const db = firebase.firestore();
 
+  // ============ GLOBAL STATE ============
+  let currentDoctor = null;
+  let currentPatientEmail = null;
+  let uniquePatientsServed = new Set();
+  let totalRecordsViewed = 0;
+
+  // ============ UTILITIES: ESCAPE HTML (XSS prevention) ============
+  window.escapeHtml = function(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  // ============ TOAST NOTIFICATIONS ============
+  let toastTimeout = null;
+  window.showToast = function(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toast-msg');
+    const toastIcon = document.getElementById('toast-icon');
+    clearTimeout(toastTimeout);
+    toastMsg.textContent = message;
+    toastIcon.textContent = type === 'error' ? '⚠️' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+    toast.className = `toast ${type} show`;
+    toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 4000);
+  };
+
+  // ============ EMAIL VALIDATION ============
+  function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  }
+
+  // ============ AUTH ============
   auth.onAuthStateChanged((user) => {
     if (user) {
-      const name = user.displayName || user.email.split('@')[0];
+      currentDoctor = user;
+      const name = user.displayName || (user.email ? user.email.split('@')[0] : 'Doctor');
       document.getElementById('doc-badge').innerHTML = 
-        `<div class="user-avatar">${name[0].toUpperCase()}</div><span>Dr. ${name}</span>`;
+        `<div class="user-avatar">${escapeHtml(name[0].toUpperCase())}</div><span>Dr. ${escapeHtml(name)}</span>`;
       checkApiKey();
     } else {
       window.location.replace('login.html');
@@ -271,10 +334,12 @@ window.addEventListener('load', function() {
   });
 
   window.handleLogout = function() {
-    auth.signOut().then(() => window.location.replace('login.html'));
+    if (confirm("Are you sure you want to logout?")) {
+      auth.signOut().then(() => window.location.replace('login.html'));
+    }
   }
 
-  // API KEY
+  // ============ API KEY MANAGEMENT ============
   function checkApiKey() {
     if (!localStorage.getItem('hc_gemini_key')) {
       document.getElementById('api-banner').style.display = 'block';
@@ -283,21 +348,30 @@ window.addEventListener('load', function() {
 
   window.saveApiKey = function() {
     const key = document.getElementById('api-key-input').value.trim();
-    if (!key || !key.startsWith('AIza')) {
-      alert("⚠️ Valid Gemini key daalo! (AIzaSy... se shuru hoti hai)");
+    if (!key) {
+      showToast('Please enter your API key', 'error');
+      return;
+    }
+    if (!key.startsWith('AIza') || key.length < 30) {
+      showToast('Invalid Gemini key format. Should start with AIzaSy...', 'error');
       return;
     }
     localStorage.setItem('hc_gemini_key', key);
     document.getElementById('api-banner').style.display = 'none';
     document.getElementById('api-key-input').value = '';
-    alert("✅ API Key save! AI Brief ab kaam karega.");
+    showToast('API key saved! AI Brief is ready to use.', 'success');
   }
 
-  // CYBERPUNK SCANNER
+  // ============ SCANNER ============
   window.html5QrcodeScanner = null;
   window.scannerActive = false;
 
   window.startScanner = function() {
+    if (typeof Html5Qrcode === 'undefined') {
+      showToast('Scanner library still loading — try again in a moment.', 'warning');
+      return;
+    }
+
     document.getElementById('scanner-modal').style.display = 'flex';
     window.scannerActive = true;
     const h = document.getElementById('scanner-header');
@@ -306,11 +380,6 @@ window.addEventListener('load', function() {
     h.querySelector('p').textContent = 'ALIGN QR CODE IN FRAME';
     document.getElementById('scanner-status-text').textContent = 'CAMERA ACTIVE — SCANNING...';
     document.getElementById('reader').innerHTML = '';
-
-    if (typeof Html5Qrcode === 'undefined') {
-      alert("⚠️ Scanner library load ho rahi hai... 2 sec baad try karo.");
-      stopScanner(); return;
-    }
 
     window.html5QrcodeScanner = new Html5Qrcode("reader");
     window.html5QrcodeScanner.start(
@@ -323,7 +392,9 @@ window.addEventListener('load', function() {
       },
       () => {}
     ).catch((err) => {
-      document.getElementById('scanner-status-text').textContent = 'CAMERA ERROR — TRY AGAIN';
+      console.error('Scanner start error:', err);
+      document.getElementById('scanner-status-text').textContent = 'CAMERA ERROR — CHECK PERMISSIONS';
+      showToast('Camera access denied. Please allow camera permission.', 'error');
     });
   }
 
@@ -336,9 +407,35 @@ window.addEventListener('load', function() {
     const h = document.getElementById('scanner-header');
     h.classList.add('success');
     h.querySelector('h2').textContent = '✓ QR DETECTED!';
-    h.querySelector('p').textContent = 'FETCHING PATIENT DATA...';
+    h.querySelector('p').textContent = 'VERIFYING ACCESS...';
     document.getElementById('scanner-status-text').textContent = '✓ SCAN SUCCESSFUL';
-    setTimeout(() => { stopScanner(); fetchPatientData(text.trim().toLowerCase()); }, 1000);
+    
+    // Parse the QR code content — support both JSON (new) and plain email (old/manual)
+    let patientEmail = null;
+    try {
+      const parsed = JSON.parse(text.trim());
+      if (parsed && parsed.platform === 'healthchain' && parsed.email) {
+        patientEmail = parsed.email.toLowerCase();
+      } else if (parsed && parsed.email) {
+        patientEmail = parsed.email.toLowerCase();
+      }
+    } catch(e) {
+      // Not JSON — treat as plain email (backward compatibility)
+      const trimmed = text.trim().toLowerCase();
+      if (validateEmail(trimmed)) {
+        patientEmail = trimmed;
+      }
+    }
+
+    if (!patientEmail) {
+      setTimeout(() => { 
+        stopScanner(); 
+        showToast('Invalid QR code. Not a HealthChain QR.', 'error'); 
+      }, 1000);
+      return;
+    }
+
+    setTimeout(() => { stopScanner(); fetchPatientData(patientEmail); }, 800);
   }
 
   window.playBeep = function() {
@@ -363,86 +460,312 @@ window.addEventListener('load', function() {
     document.getElementById('scanner-modal').style.display = 'none';
   }
 
+  // ============ MANUAL SEARCH ============
   window.manualSearch = function() {
-    const email = document.getElementById('search-input').value.trim().toLowerCase();
-    if (!email) return alert("Enter patient email!");
+    const input = document.getElementById('search-input');
+    const email = input.value.trim().toLowerCase();
+    
+    if (!email) {
+      input.classList.add('error');
+      showToast("Please enter patient email", 'error');
+      input.focus();
+      return;
+    }
+    if (!validateEmail(email)) {
+      input.classList.add('error');
+      showToast("Please enter a valid email", 'error');
+      input.focus();
+      return;
+    }
+    
+    input.classList.remove('error');
     fetchPatientData(email);
   }
 
-  window.fetchPatientData = function(patientEmail) {
-    const section = document.getElementById('patient-section');
-    const container = document.getElementById('dynamic-reports');
-    section.style.display = 'block';
-    document.getElementById('display-email').textContent = patientEmail;
-    container.innerHTML = `<p style="color:var(--accent);grid-column:1/-1;">⏳ Blockchain se records fetch ho rahe hain...</p>`;
-    section.scrollIntoView({ behavior: 'smooth' });
+  // ============ FETCH PATIENT DATA (WITH ACCESS CONTROL!) ============
+  window.fetchPatientData = async function(patientEmail) {
+    if (!currentDoctor) {
+      showToast('Please login again.', 'error');
+      return;
+    }
 
-    db.collection("reports").where("patientEmail","==",patientEmail).orderBy("date","desc").get()
-      .then((snap) => {
-        if (snap.empty) { container.innerHTML = `<p style="color:var(--muted);grid-column:1/-1;">No records found.</p>`; return; }
-        let html = '';
-        snap.forEach((doc) => {
-          const d = doc.data();
-          html += `<div class="value-item"><div class="value-label">${d.reportName}</div><div class="value-num ${d.status==='Abnormal'?'abnormal':'normal'}">${d.findings}</div><div class="value-range">Status: ${d.status}</div></div>`;
-        });
-        container.innerHTML = html;
-        document.getElementById('total-patients').textContent = snap.size;
-      })
-      .catch(err => { container.innerHTML = `<p style="color:var(--red);grid-column:1/-1;">Error: ${err.message}</p>`; });
+    const section = document.getElementById('patient-section');
+    const accessDenied = document.getElementById('access-denied');
+    const container = document.getElementById('dynamic-reports');
+    const searchBtn = document.getElementById('search-btn');
+
+    // Hide both initially
+    section.style.display = 'none';
+    accessDenied.style.display = 'none';
+
+    // Loading state
+    searchBtn.disabled = true;
+    const originalText = searchBtn.textContent;
+    searchBtn.innerHTML = '<span class="btn-spinner"></span>';
+
+    try {
+      const doctorEmail = currentDoctor.email.toLowerCase();
+      currentPatientEmail = patientEmail;
+
+      // 🚨 STEP 1: CHECK IF DOCTOR HAS ACCESS
+      const accessSnap = await db.collection("doctor_access")
+        .where("doctorEmail", "==", doctorEmail)
+        .where("patientEmail", "==", patientEmail)
+        .get();
+
+      if (accessSnap.empty) {
+        // ❌ NO ACCESS
+        accessDenied.style.display = 'block';
+        document.getElementById('access-denied-msg').innerHTML = 
+          `Patient <strong>${escapeHtml(patientEmail)}</strong> has not granted you access to their records.<br><br>Ask the patient to grant access from their dashboard using your email: <strong>${escapeHtml(doctorEmail)}</strong>`;
+        accessDenied.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast('Access not granted by this patient', 'warning');
+        return;
+      }
+
+      // ✅ ACCESS GRANTED — Show patient section
+      section.style.display = 'block';
+      document.getElementById('display-email').textContent = patientEmail;
+      container.innerHTML = `<p style="color:var(--accent);grid-column:1/-1;">⏳ Fetching authorized records...</p>`;
+      section.scrollIntoView({ behavior: 'smooth' });
+
+      // STEP 2: Fetch reports (only after access verified)
+      const reportsSnap = await db.collection("reports")
+        .where("patientEmail", "==", patientEmail)
+        .orderBy("date", "desc")
+        .get();
+
+      if (reportsSnap.empty) {
+        container.innerHTML = `<p style="color:var(--muted);grid-column:1/-1;">No records found for this patient yet.</p>`;
+        return;
+      }
+
+      let html = '';
+      reportsSnap.forEach((doc) => {
+        const d = doc.data();
+        const hash = d.recordHash || d.blockchainHash || '';
+        const shortHash = hash ? hash.substring(0, 12) + '...' : '';
+        const reportName = escapeHtml(d.reportName || 'Unknown');
+        const findings = escapeHtml(d.findings || '');
+        const status = escapeHtml(d.status || 'Normal');
+        const isAbnormal = d.status === 'Abnormal';
+        
+        html += `
+          <div class="value-item">
+            <div class="value-label">${reportName}</div>
+            <div class="value-num ${isAbnormal ? 'abnormal' : 'normal'}">${findings}</div>
+            <div class="value-range">Status: ${status}</div>
+            ${shortHash ? `<div class="value-hash">🔗 ${escapeHtml(shortHash)}</div>` : ''}
+          </div>`;
+      });
+      container.innerHTML = html;
+
+      // Update stats
+      uniquePatientsServed.add(patientEmail);
+      totalRecordsViewed += reportsSnap.size;
+      document.getElementById('total-patients').textContent = uniquePatientsServed.size;
+      document.getElementById('total-records').textContent = totalRecordsViewed;
+
+      showToast(`${reportsSnap.size} records fetched`, 'success');
+
+    } catch (err) {
+      console.error('Fetch error:', err);
+      container.innerHTML = `<p style="color:var(--red);grid-column:1/-1;">Error loading records: ${escapeHtml(err.message || 'Unknown error')}</p>`;
+      showToast('Failed to fetch records', 'error');
+    } finally {
+      searchBtn.disabled = false;
+      searchBtn.innerHTML = originalText;
+    }
   }
 
-  // VOICE
+  // ============ VOICE DICTATION (with language selector) ============
   window.recognizing = false;
   window.recognition = null;
-  if ('webkitSpeechRecognition' in window) {
-    window.recognition = new webkitSpeechRecognition();
+  window.currentLang = 'en-IN';
+
+  function initRecognition() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      return false;
+    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    window.recognition = new SR();
     window.recognition.continuous = false;
     window.recognition.interimResults = true;
-    window.recognition.lang = 'en-IN';
-    window.recognition.onstart = () => { window.recognizing = true; document.getElementById('micBtn').classList.add('recording'); document.getElementById('micBtn').innerHTML = "🔴 Listening..."; };
-    window.recognition.onresult = (e) => { let t=''; for(let i=e.resultIndex;i<e.results.length;++i) if(e.results[i].isFinal) t+=e.results[i][0].transcript; if(t) document.getElementById('rx-box').value+=t+" "; };
-    window.recognition.onend = () => { window.recognizing = false; document.getElementById('micBtn').classList.remove('recording'); document.getElementById('micBtn').innerHTML = "🎤 Tap to Dictate"; };
+    window.recognition.lang = window.currentLang;
+    
+    window.recognition.onstart = () => {
+      window.recognizing = true;
+      const btn = document.getElementById('micBtn');
+      btn.classList.add('recording');
+      btn.innerHTML = "🔴 Listening...";
+    };
+    
+    window.recognition.onresult = (e) => {
+      let t = '';
+      for (let i = e.resultIndex; i < e.results.length; ++i) {
+        if (e.results[i].isFinal) t += e.results[i][0].transcript;
+      }
+      if (t) document.getElementById('rx-box').value += t + " ";
+    };
+    
+    window.recognition.onend = () => {
+      window.recognizing = false;
+      const btn = document.getElementById('micBtn');
+      btn.classList.remove('recording');
+      btn.innerHTML = "🎤 Tap to Dictate";
+    };
+
+    window.recognition.onerror = (e) => {
+      window.recognizing = false;
+      const btn = document.getElementById('micBtn');
+      btn.classList.remove('recording');
+      btn.innerHTML = "🎤 Tap to Dictate";
+      if (e.error === 'no-speech') return; // silent
+      showToast('Voice error: ' + e.error, 'error');
+    };
+
+    return true;
+  }
+
+  initRecognition();
+
+  window.updateLanguage = function() {
+    window.currentLang = document.getElementById('lang-select').value;
+    if (window.recognition) {
+      window.recognition.lang = window.currentLang;
+    }
+    showToast(`Voice language: ${document.getElementById('lang-select').selectedOptions[0].textContent}`, 'info');
   }
 
   window.toggleMic = function() {
-    if (!window.recognition) return alert("Speech not supported. Use Chrome!");
-    if (window.recognizing) { window.recognition.stop(); return; }
-    window.recognition.start();
+    if (!window.recognition) {
+      showToast('Speech recognition not supported. Please use Chrome browser.', 'error');
+      return;
+    }
+    if (window.recognizing) {
+      window.recognition.stop();
+      return;
+    }
+    try {
+      window.recognition.start();
+    } catch (e) {
+      showToast('Could not start voice. Try again.', 'error');
+    }
   }
 
+  // ============ SEND TO WHATSAPP ============
   window.sendToWhatsApp = function() {
-    const rx = document.getElementById('rx-box').value;
-    if(!rx) return alert("Pehle prescription likho!");
-    window.open(`https://wa.me/?text=${encodeURIComponent('*HealthChain E-Prescription*\n\n👨‍⚕️ Doctor\'s Note:\n'+rx+'\n\n_Secured via Blockchain ⛓️_')}`, '_blank');
+    const rx = document.getElementById('rx-box').value.trim();
+    if (!rx) {
+      showToast('Please write or dictate prescription first', 'error');
+      return;
+    }
+    const doctorName = currentDoctor.displayName || currentDoctor.email.split('@')[0];
+    const patient = currentPatientEmail || 'Patient';
+    const msg = `*HealthChain E-Prescription* 🏥\n\n👨‍⚕️ *Doctor:* Dr. ${doctorName}\n👤 *Patient:* ${patient}\n📅 *Date:* ${new Date().toLocaleDateString('en-IN')}\n\n*Prescription:*\n${rx}\n\n_— Secured with SHA-256 record hashing_\n_Learn more: healthchain-nu.vercel.app_`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
+  // ============ GENERATE AI BRIEF ============
   window.generateBrief = async function() {
     const briefDiv = document.getElementById('ai-brief');
-    const records = document.getElementById('dynamic-reports').innerText;
-    if (!records || records.includes("Blockchain se") || records.includes("No records") || records.includes("Scan ya")) {
-      alert("Pehle patient scan ya search karo!"); return;
+    const aiBtn = document.getElementById('aiBriefBtn');
+    const recordsContainer = document.getElementById('dynamic-reports');
+    const records = recordsContainer.innerText.trim();
+
+    // Validate
+    if (!records || records.includes("Fetching") || records.includes("No records") || records.includes("Scan ya") || records.includes("Error")) {
+      showToast('Please scan or search a patient with records first', 'warning');
+      return;
     }
+
     const API_KEY = localStorage.getItem('hc_gemini_key');
     if (!API_KEY) {
       document.getElementById('api-banner').style.display = 'block';
-      alert("⚠️ Pehle Gemini API key save karo!"); return;
+      showToast('Please setup Gemini API key first', 'warning');
+      document.getElementById('api-key-input').focus();
+      return;
     }
+
+    // Loading state
+    const originalBtnText = aiBtn.innerHTML;
+    aiBtn.disabled = true;
+    aiBtn.innerHTML = '<span class="btn-spinner"></span> Analyzing...';
     briefDiv.classList.add('show');
-    briefDiv.innerHTML = `<h4>🤖 AI Agent</h4><p style="color:var(--accent)">Gemini AI analyze kar raha hai... ⏳</p>`;
+    briefDiv.innerHTML = `<h4>🤖 AI Clinical Analysis</h4><p style="color:var(--accent)">Gemini AI is analyzing records... ⏳</p>`;
     briefDiv.scrollIntoView({ behavior: 'smooth' });
+
     try {
-      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
-        method: "POST", headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({contents:[{parts:[{text:`You are a professional medical AI. Analyze: ${records}. Give 2-line risk summary and 3 action bullet points. English only.`}]}]})
+      const prompt = `You are a medical AI assistant helping a doctor quickly understand a patient's health records.
+
+Patient Records:
+${records}
+
+Provide a professional clinical brief in this exact format:
+
+**Risk Summary:** (2 lines max, highlight critical concerns)
+
+**Recommended Actions:**
+- Action 1 (specific and actionable)
+- Action 2 (specific and actionable)
+- Action 3 (specific and actionable)
+
+**Follow-up:** (1 line suggesting timing)
+
+Keep it concise, medically accurate, and in English. Don't speculate beyond the data provided.`;
+
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(API_KEY)}`, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          contents: [{parts: [{text: prompt}]}],
+          safetySettings: [
+            { category: "HARM_CATEGORY_MEDICAL", threshold: "BLOCK_NONE" }
+          ]
+        })
       });
+      
       const data = await resp.json();
+      
       if (data.error) throw new Error(data.error.message);
-      const text = data.candidates[0].content.parts[0].text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--accent);">$1</strong>');
-      briefDiv.innerHTML = `<h4>🤖 AI Clinical Summary</h4><p>${text}</p>`;
-    } catch(e) {
-      briefDiv.innerHTML = `<h4>❌ Error</h4><p style="color:var(--red);">${e.message} — API key check karo!</p>`;
+      if (!data.candidates || !data.candidates[0]) throw new Error('No response from AI');
+      
+      const rawText = data.candidates[0].content.parts[0].text;
+      
+      // SAFE RENDERING: escape first, then apply limited markdown
+      let safeHtml = escapeHtml(rawText);
+      // Convert **bold** to <strong>
+      safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // Convert line breaks
+      safeHtml = safeHtml.replace(/\n/g, '<br>');
+      // Convert bullet points (- item)
+      safeHtml = safeHtml.replace(/(?:^|<br>)- (.+?)(?=<br>|$)/g, '<li>$1</li>');
+      safeHtml = safeHtml.replace(/(<li>.+?<\/li>)+/g, '<ul>$&</ul>');
+      
+      briefDiv.innerHTML = `<h4>🤖 AI Clinical Brief</h4><div>${safeHtml}</div><p style="margin-top:12px;color:var(--muted);font-size:0.75rem;">⚠️ AI-generated — please verify with clinical judgment.</p>`;
+      
+      showToast('AI brief generated', 'success');
+    } catch (e) {
+      console.error('AI brief error:', e);
+      briefDiv.innerHTML = `<h4>❌ Error Generating Brief</h4><p style="color:var(--red);">${escapeHtml(e.message || 'Unknown error')}</p><p style="margin-top:8px;color:var(--muted);font-size:0.85rem;">Please verify your Gemini API key.</p>`;
+      showToast('AI brief failed', 'error');
+    } finally {
+      aiBtn.disabled = false;
+      aiBtn.innerHTML = originalBtnText;
     }
   }
+
+  // ============ KEYBOARD SHORTCUTS ============
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('scanner-modal').style.display === 'flex') {
+      stopScanner();
+    }
+  });
+
+  // Clear error styling on input
+  document.getElementById('search-input').addEventListener('input', (e) => {
+    e.target.classList.remove('error');
+  });
 });
 </script>
 </body>

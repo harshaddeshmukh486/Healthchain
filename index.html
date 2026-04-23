@@ -3,31 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="HealthChain — India's first AI + Blockchain health records platform for rural Bharat. Built by a 17-year-old founder."/>
+  <meta name="author" content="Harshad Deshmukh"/>
+  <meta property="og:title" content="HealthChain — Future of Healthcare"/>
+  <meta property="og:description" content="Secure, AI-powered health records built for Bharat."/>
   <title>HealthChain — Future of Healthcare</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
-/* 1. पेज को दाएँ-बाएँ खिसकने से रोकने के लिए */
-html, body {
-  overflow-x: hidden !important;
-  max-width: 100vw !important;
-}
-
-/* 2. लंबे नाम को स्क्रीन से बाहर जाने से रोकने के लिए */
-.user-badge span {
-  max-width: 90px; /* इससे ज्यादा बड़ा नाम नहीं दिखेगा */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis; /* लंबे नाम के आगे ... लगा देगा */
-  display: inline-block;
-  vertical-align: bottom;
-}
-
-/* 3. Navbar को एकदम फिक्स करने के लिए */
-nav {
-  max-width: 100vw;
-  overflow: hidden;
-}
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #060a12; --surface: #0d1520; --border: #1a2535;
@@ -40,8 +22,14 @@ nav {
     nav { position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: rgba(6,10,18,0.9); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
     .logo { display: flex; align-items: center; gap: 10px; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; color: var(--text); text-decoration: none; }
     .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .nav-links { display: flex; gap: 24px; align-items: center; }
+    .nav-link { color: var(--muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+    .nav-link:hover { color: var(--accent); }
     .nav-btn { background: var(--accent); color: #000; border: none; padding: 10px 22px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.3s; text-decoration: none; }
     .nav-btn:hover { background: #fff; transform: scale(1.05); }
+    @media (max-width: 640px) {
+      .nav-links .nav-link { display: none; }
+    }
     .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 80px 24px 60px; position: relative; overflow: hidden; }
     .hero::before { content: ''; position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%); width: 600px; height: 600px; background: radial-gradient(circle, rgba(0,212,255,0.08) 0%, transparent 70%); pointer-events: none; }
     .badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); border-radius: 50px; padding: 8px 18px; font-size: 0.85rem; color: var(--accent); margin-bottom: 28px; animation: fadeUp 0.6s ease; }
@@ -80,6 +68,7 @@ nav {
     .feature-icon { font-size: 2rem; margin-bottom: 16px; }
     .feature-title { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; }
     .feature-desc { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+    .coming-soon-tag { display: inline-block; background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.3); color: #ffc107; font-size: 0.7rem; padding: 3px 10px; border-radius: 50px; margin-left: 6px; font-weight: 500; vertical-align: middle; }
     .steps { display: flex; flex-direction: column; gap: 24px; }
     .step { display: flex; gap: 20px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; transition: all 0.3s; }
     .step:hover { border-color: rgba(0,212,255,0.3); }
@@ -108,18 +97,26 @@ nav {
     .cta-desc { color: var(--muted); font-size: 1rem; margin-bottom: 32px; max-width: 400px; margin-left: auto; margin-right: auto; line-height: 1.7; }
     footer { border-top: 1px solid var(--border); padding: 32px 24px; text-align: center; color: var(--muted); font-size: 0.85rem; }
     footer span { color: var(--accent); }
+    .footer-links { display: flex; gap: 20px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+    .footer-links a { color: var(--muted); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--accent); }
   </style>
 </head>
 <body>
-<div class="beta-banner">🚧 Beta Version — Real version coming soon! Join early access below 👇</div>
+<div class="beta-banner">🚧 Beta Version — We're actively building. Join early access below 👇</div>
 <nav>
   <a href="index.html" class="logo"><div class="logo-icon">⛓</div>HealthChain</a>
-  <a href="login.html" class="nav-btn">Get Started</a>
+  <div class="nav-links">
+    <a href="#features" class="nav-link">Features</a>
+    <a href="#how" class="nav-link">How it Works</a>
+    <a href="#pricing" class="nav-link">Pricing</a>
+    <a href="login.html" class="nav-btn">Get Started</a>
+  </div>
 </nav>
 <section class="hero">
-  <div class="badge"><div class="badge-dot"></div>🇮🇳 India's First AI + Blockchain Health System</div>
+  <div class="badge"><div class="badge-dot"></div>🇮🇳 Built for Bharat — AI + Blockchain Health Records</div>
   <h1>Future of<br/><span>Healthcare</span></h1>
-  <p class="hero-desc">All your medical records in one place — secure, tamper-proof, with AI-powered insights.</p>
+  <p class="hero-desc">All your medical records in one place — secure, verifiable, with AI-powered insights. Built for rural and urban India.</p>
   <div class="hero-btns">
     <a href="login.html" class="btn-primary">🚀 Get Started — It's Free</a>
     <a href="#features" class="btn-outline">View Features</a>
@@ -132,105 +129,106 @@ nav {
       <span style="margin-left:8px;font-size:0.8rem;color:var(--muted)">Patient Dashboard</span>
     </div>
     <div class="preview-cards">
-      <div class="preview-card"><div class="preview-card-num">12</div><div class="preview-card-label">Reports</div></div>
-      <div class="preview-card"><div class="preview-card-num">3</div><div class="preview-card-label">Doctors</div></div>
-      <div class="preview-card"><div class="preview-card-num">100%</div><div class="preview-card-label">Secured</div></div>
+      <div class="preview-card"><div class="preview-card-num">📄</div><div class="preview-card-label">Your Reports</div></div>
+      <div class="preview-card"><div class="preview-card-num">👨‍⚕️</div><div class="preview-card-label">Your Doctors</div></div>
+      <div class="preview-card"><div class="preview-card-num">🔒</div><div class="preview-card-label">Secured</div></div>
     </div>
-    <div class="tag">✅ Blockchain Verified</div>
+    <div class="tag">✅ Record Integrity Verified</div>
   </div>
 </section>
 <div class="stats">
-  <div class="stat"><div class="stat-num">SHA-256</div><div class="stat-label">Blockchain Encryption</div></div>
-  <div class="stat"><div class="stat-num">GPT-5</div><div class="stat-label">AI Analysis</div></div>
-  <div class="stat"><div class="stat-num">0</div><div class="stat-label">Data Breaches</div></div>
-  <div class="stat"><div class="stat-num">∞</div><div class="stat-label">Records Stored</div></div>
+  <div class="stat"><div class="stat-num">SHA-256</div><div class="stat-label">Record Hashing</div></div>
+  <div class="stat"><div class="stat-num">Gemini AI</div><div class="stat-label">Report Analysis</div></div>
+  <div class="stat"><div class="stat-num">Firebase</div><div class="stat-label">Secure Backend</div></div>
+  <div class="stat"><div class="stat-num">Polygon</div><div class="stat-label">Blockchain (Soon)</div></div>
 </div>
 <section class="section" id="features">
   <div class="section-label">Features</div>
   <h2 class="section-title">Everything in one place</h2>
   <p class="section-desc">From patient to doctor — all connected, all secure.</p>
   <div class="features-grid">
-    <div class="feature-card"><div class="feature-icon">🔗</div><div class="feature-title">Blockchain Security</div><div class="feature-desc">SHA-256 hash for every record — nobody can tamper with it. Forever secure.</div></div>
-    <div class="feature-card"><div class="feature-icon">🤖</div><div class="feature-title">Agentic AI</div><div class="feature-desc">AI automatically analyses reports, detects abnormal values, creates doctor brief.</div></div>
-    <div class="feature-card"><div class="feature-icon">👨‍⚕️</div><div class="feature-title">Doctor Dashboard</div><div class="feature-desc">Doctor gets complete patient history in one click. Faster, better decisions.</div></div>
-    <div class="feature-card"><div class="feature-icon">⚠️</div><div class="feature-title">Risk Detection</div><div class="feature-desc">Abnormal values automatically detected — instant alert to patient and doctor.</div></div>
-    <div class="feature-card"><div class="feature-icon">📱</div><div class="feature-title">Easy Upload</div><div class="feature-desc">PDF, image or text — upload any report in seconds.</div></div>
-    <div class="feature-card"><div class="feature-icon">🔐</div><div class="feature-title">Access Control</div><div class="feature-desc">You decide who sees your data — full control always.</div></div>
+    <div class="feature-card"><div class="feature-icon">🔗</div><div class="feature-title">Record Integrity <span class="coming-soon-tag">Blockchain Soon</span></div><div class="feature-desc">Each record is hashed with SHA-256 — any tampering is instantly detectable. Full blockchain verification coming soon on Polygon.</div></div>
+    <div class="feature-card"><div class="feature-icon">🤖</div><div class="feature-title">AI Doctor Brief</div><div class="feature-desc">Gemini AI reads your reports, detects abnormal values, and creates a doctor-ready brief in seconds.</div></div>
+    <div class="feature-card"><div class="feature-icon">👨‍⚕️</div><div class="feature-title">Doctor Dashboard</div><div class="feature-desc">Doctors get your complete history with one QR scan. Faster consultations, better decisions.</div></div>
+    <div class="feature-card"><div class="feature-icon">⚠️</div><div class="feature-title">Risk Detection</div><div class="feature-desc">Abnormal values are highlighted automatically — so you never miss a warning sign.</div></div>
+    <div class="feature-card"><div class="feature-icon">📱</div><div class="feature-title">Easy Upload</div><div class="feature-desc">PDF, image, or text — upload any report from your phone in seconds.</div></div>
+    <div class="feature-card"><div class="feature-icon">🔐</div><div class="feature-title">Access Control</div><div class="feature-desc">You decide which doctor sees your data — grant and revoke access anytime.</div></div>
   </div>
 </section>
-<section class="section">
+<section class="section" id="how">
   <div class="section-label">How It Works</div>
   <h2 class="section-title">Simple 4 steps</h2>
   <p class="section-desc">Secure your health data in minutes.</p>
   <div class="steps">
     <div class="step"><div class="step-num">1</div><div><div class="step-title">Login with Google</div><div class="step-desc">Secure Google OAuth login — no password to remember.</div></div></div>
-    <div class="step"><div class="step-num">2</div><div><div class="step-title">Upload your Report</div><div class="step-desc">Blood test, X-ray, MRI — upload any report. Instantly secured on blockchain.</div></div></div>
-    <div class="step"><div class="step-num">3</div><div><div class="step-title">AI Analysis</div><div class="step-desc">AI automatically scans the report, highlights abnormal values, assesses risk.</div></div></div>
-    <div class="step"><div class="step-num">4</div><div><div class="step-title">Share with Doctor</div><div class="step-desc">Give your doctor secure access — they can view your complete history from anywhere.</div></div></div>
+    <div class="step"><div class="step-num">2</div><div><div class="step-title">Upload your Report</div><div class="step-desc">Blood test, X-ray, MRI — upload any report. Instantly hashed and secured.</div></div></div>
+    <div class="step"><div class="step-num">3</div><div><div class="step-title">AI Analysis</div><div class="step-desc">Gemini AI scans the report, highlights abnormal values, and assesses risk.</div></div></div>
+    <div class="step"><div class="step-num">4</div><div><div class="step-title">Share with Doctor</div><div class="step-desc">Show a QR code — your doctor sees your complete history from anywhere.</div></div></div>
   </div>
 </section>
 <section class="section" id="pricing">
   <div class="section-label">Pricing</div>
-  <h2 class="section-title">Choose your plan</h2>
-  <p class="section-desc">Start free — upgrade whenever you want!</p>
+  <h2 class="section-title">Free during Beta</h2>
+  <p class="section-desc">All features are free while we're building. Paid plans will launch after we reach 1,000 happy users.</p>
   <div class="pricing-grid">
-    <div class="pricing-card">
-      <div class="plan-name">Free</div>
-      <div class="plan-price">₹0<span>/month</span></div>
-      <div class="plan-desc">Perfect for personal use!</div>
-      <ul class="plan-features">
-        <li>✅ 5 Report uploads</li>
-        <li>✅ Basic health records</li>
-        <li>✅ 1 Doctor access</li>
-        <li>✅ Google Login</li>
-        <li class="disabled">❌ Blockchain Security</li>
-        <li class="disabled">❌ Agentic AI</li>
-        <li class="disabled">❌ Risk Detection</li>
-      </ul>
-      <a href="login.html" class="plan-btn plan-btn-outline">Get Started Free</a>
-    </div>
     <div class="pricing-card pricing-card-popular">
-      <div class="popular-badge">⭐ Most Popular</div>
-      <div class="plan-name">Pro</div>
-      <div class="plan-price">₹99<span>/month</span></div>
-      <div class="plan-desc">With full Blockchain security!</div>
+      <div class="popular-badge">🎉 Beta — Free for Everyone</div>
+      <div class="plan-name">Early Access</div>
+      <div class="plan-price">₹0<span>/month</span></div>
+      <div class="plan-desc">Complete access during our beta period.</div>
       <ul class="plan-features">
-        <li>✅ Unlimited Reports</li>
-        <li>✅ Blockchain Security</li>
-        <li>✅ 5 Doctor access</li>
-        <li>✅ SHA-256 Encryption</li>
-        <li>✅ Tamper-proof Records</li>
-        <li>✅ Priority Support</li>
-        <li class="disabled">❌ Agentic AI</li>
+        <li>✅ Unlimited Report Uploads</li>
+        <li>✅ SHA-256 Record Hashing</li>
+        <li>✅ AI Doctor Brief (Gemini)</li>
+        <li>✅ QR-based Doctor Access</li>
+        <li>✅ Access Control (Grant/Revoke)</li>
+        <li>✅ Direct founder support</li>
       </ul>
-      <a href="#early-access" class="plan-btn plan-btn-primary">Coming Soon 🚀</a>
+      <a href="login.html" class="plan-btn plan-btn-primary">Get Started Free</a>
     </div>
     <div class="pricing-card">
-      <div class="plan-name">Enterprise</div>
-      <div class="plan-price">₹299<span>/month</span></div>
-      <div class="plan-desc">Full power — AI + Blockchain!</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">Soon<span></span></div>
+      <div class="plan-desc">Coming after beta — with full Polygon blockchain verification.</div>
       <ul class="plan-features">
-        <li>✅ Everything in Pro</li>
-        <li>✅ Agentic AI Analysis</li>
-        <li>✅ Auto Risk Detection</li>
-        <li>✅ AI Doctor Brief</li>
-        <li>✅ Unlimited Doctors</li>
-        <li>✅ Hospital Integration</li>
-        <li>✅ 24/7 Support</li>
+        <li>✅ Everything in Beta</li>
+        <li>✅ On-chain Record Verification</li>
+        <li>✅ Multiple Doctor Access</li>
+        <li>✅ Priority Support</li>
+        <li>✅ Marathi + Hindi voice</li>
       </ul>
-      <a href="#early-access" class="plan-btn plan-btn-outline">Coming Soon 🚀</a>
+      <a href="#early-access" class="plan-btn plan-btn-outline">Notify Me 🔔</a>
+    </div>
+    <div class="pricing-card">
+      <div class="plan-name">Clinic / Hospital</div>
+      <div class="plan-price">Soon<span></span></div>
+      <div class="plan-desc">For doctors, clinics, and rural health centers.</div>
+      <ul class="plan-features">
+        <li>✅ Bulk patient management</li>
+        <li>✅ Dedicated doctor dashboard</li>
+        <li>✅ ABDM integration (planned)</li>
+        <li>✅ Custom onboarding</li>
+        <li>✅ 24/7 support</li>
+      </ul>
+      <a href="#early-access" class="plan-btn plan-btn-outline">Contact Us 📧</a>
     </div>
   </div>
 </section>
 <section class="cta" id="early-access">
   <h2 class="cta-title">Want Early Access? 🚀</h2>
-  <p class="cta-desc">Real version is being built — join now to get first access!</p>
-  <a href="mailto:harshaddeshmukh486@gmail.com?subject=HealthChain Early Access" class="btn-primary">📧 Join Early Access</a>
+  <p class="cta-desc">We're actively building HealthChain. Join early to shape the product and get first access.</p>
+  <a href="mailto:harshaddeshmukh486@gmail.com?subject=HealthChain%20Early%20Access&body=Hi%20Harshad%2C%0A%0AI'd%20like%20early%20access%20to%20HealthChain.%0A%0AName%3A%20%0ACity%3A%20%0AI%20am%20a%3A%20(Patient%20%2F%20Doctor%20%2F%20Clinic)%0A%0AThanks!" class="btn-primary">📧 Join Early Access</a>
   <p style="margin-top:20px;color:var(--muted);font-size:0.85rem;">Founder: <span style="color:var(--accent)">Harshad Deshmukh</span> • Age 17 • Built with ❤️ in India 🇮🇳</p>
 </section>
 <footer>
   <p>⛓ <span>HealthChain</span> — Future of Healthcare</p>
-  <p style="margin-top:8px;">Built by <span>Harshad Deshmukh</span> • India 🇮🇳</p>
+  <p style="margin-top:8px;">Built by <span>Harshad Deshmukh</span> • Pusad, Maharashtra 🇮🇳</p>
+  <div class="footer-links">
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="login.html">Login</a>
+    <a href="mailto:harshaddeshmukh486@gmail.com">Contact</a>
+  </div>
 </footer>
 </body>
 </html>

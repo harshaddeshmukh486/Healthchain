@@ -11,38 +11,17 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
   <style>
-/* 1. पेज को दाएँ-बाएँ खिसकने से रोकने के लिए */
-html, body {
-  overflow-x: hidden !important;
-  max-width: 100vw !important;
-}
-
-/* 2. लंबे नाम को स्क्रीन से बाहर जाने से रोकने के लिए */
-.user-badge span {
-  max-width: 90px; /* इससे ज्यादा बड़ा नाम नहीं दिखेगा */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis; /* लंबे नाम के आगे ... लगा देगा */
-  display: inline-block;
-  vertical-align: bottom;
-}
-
-/* 3. Navbar को एकदम फिक्स करने के लिए */
-nav {
-  max-width: 100vw;
-  overflow: hidden;
-}
-
-  
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #060a12; --surface: #0d1520; --border: #1a2535;
       --accent: #00d4ff; --accent2: #7c3aed; --text: #e8f0ff; --muted: #6b7a99;
+      --error: #ef4444; --success: #10b981;
     }
     body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
     
     #global-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .spinner { border: 4px solid rgba(0, 212, 255, 0.1); border-top: 4px solid var(--accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+    .btn-spinner { border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; width: 16px; height: 16px; animation: spin 0.8s linear infinite; display: inline-block; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     
     main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; }
@@ -51,21 +30,47 @@ nav {
     .login-header h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     
     .role-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 400px; margin-bottom: 25px; }
-    .role-card { background: var(--surface); border: 2px solid var(--border); border-radius: 16px; padding: 15px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; }
+    .role-card { background: var(--surface); border: 2px solid var(--border); border-radius: 16px; padding: 15px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; outline: none; }
+    .role-card:focus-visible { border-color: var(--accent); }
     .role-card.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(0,212,255,0.15); }
     .selected-badge { position: absolute; top: 10px; right: 10px; background: var(--accent); color: #000; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; opacity: 0; font-weight: bold; font-size: 12px; }
     .role-card.active .selected-badge { opacity: 1; }
 
     .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 25px; width: 100%; max-width: 400px; }
-    .input-field { width: 100%; background: #111827; border: 1px solid var(--border); border-radius: 12px; padding: 14px; color: white; margin-bottom: 12px; outline: none; font-size: 0.95rem; }
-    .input-field:focus { border-color: var(--accent); }
     
-    .btn { width: 100%; border: none; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .input-wrapper { position: relative; margin-bottom: 12px; }
+    .input-field { width: 100%; background: #111827; border: 1px solid var(--border); border-radius: 12px; padding: 14px; color: white; outline: none; font-size: 0.95rem; font-family: inherit; }
+    .input-field:focus { border-color: var(--accent); }
+    .input-field.error { border-color: var(--error); }
+    
+    .password-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; padding: 6px 8px; }
+    .password-toggle:hover { color: var(--accent); }
+    
+    .btn { width: 100%; border: none; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: inherit; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-google { background: #fff; color: #000; margin-bottom: 15px; }
+    .btn-google:not(:disabled):hover { background: #f3f4f6; }
     .btn-primary { background: linear-gradient(to right, #3B82F6, #8B5CF6); color: white; margin-bottom: 12px; }
+    .btn-primary:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(59,130,246,0.3); }
     .btn-outline { background: transparent; color: #8B5CF6; border: 1px solid #8B5CF6; }
+    .btn-outline:not(:disabled):hover { background: rgba(139,92,246,0.1); }
     
     .divider { text-align: center; color: var(--muted); font-size: 13px; margin: 15px 0; }
+    
+    .forgot-link { display: block; text-align: right; color: var(--muted); font-size: 0.85rem; text-decoration: none; margin-bottom: 12px; margin-top: -4px; }
+    .forgot-link:hover { color: var(--accent); }
+    
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 20px; z-index: 10000; max-width: 90%; min-width: 280px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: transform 0.3s ease; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { border-color: var(--error); color: var(--error); }
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.info { border-color: var(--accent); color: var(--accent); }
+    
+    .error-msg { color: var(--error); font-size: 0.8rem; margin-top: -8px; margin-bottom: 10px; display: none; }
+    .error-msg.show { display: block; }
+    
+    .footer-note { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 20px; }
+    .footer-note a { color: var(--accent); text-decoration: none; }
   </style>
 </head>
 <body>
@@ -75,19 +80,24 @@ nav {
   <p id="loader-text" style="margin-top: 20px; color: var(--muted); font-weight: 600;">Verifying...</p>
 </div>
 
+<div id="toast" class="toast" role="alert" aria-live="polite">
+  <span id="toast-icon">ℹ️</span>
+  <span id="toast-msg"></span>
+</div>
+
 <main>
   <div class="login-header">
     <a href="index.html" style="text-decoration:none; color:inherit;"><h1>Health<span>Chain</span></h1></a>
     <p style="color: var(--muted);">Secure your medical records</p>
   </div>
 
-  <div class="role-cards">
-    <div class="role-card active" id="patient-card" onclick="selectRole('patient')">
+  <div class="role-cards" role="radiogroup" aria-label="Select your role">
+    <div class="role-card active" id="patient-card" onclick="selectRole('patient')" tabindex="0" role="radio" aria-checked="true" onkeydown="handleRoleKey(event, 'patient')">
       <div class="selected-badge">✓</div>
       <span style="font-size: 1.8rem;">👤</span>
       <div style="font-weight: bold; margin-top:5px;">Patient</div>
     </div>
-    <div class="role-card" id="doctor-card" onclick="selectRole('doctor')">
+    <div class="role-card" id="doctor-card" onclick="selectRole('doctor')" tabindex="0" role="radio" aria-checked="false" onkeydown="handleRoleKey(event, 'doctor')">
       <div class="selected-badge">✓</div>
       <span style="font-size: 1.8rem;">👨‍⚕️</span>
       <div style="font-weight: bold; margin-top:5px;">Doctor</div>
@@ -97,21 +107,38 @@ nav {
   <div class="login-box">
     <h3 id="login-title" style="margin-bottom: 15px; color: var(--muted); font-family: 'Syne';">Login as a Patient</h3>
     
-    <button class="btn btn-google" onclick="handleGoogleLogin()">
-      <img src="https://www.google.com/favicon.ico" width="18" alt="Google"> Continue with Google
+    <button class="btn btn-google" id="googleBtn" onclick="handleGoogleLogin()" type="button">
+      <img src="https://www.google.com/favicon.ico" width="18" alt=""> Continue with Google
     </button>
 
     <div class="divider">or login with email</div>
 
-    <input type="email" id="email" class="input-field" placeholder="Email Address">
-    <input type="password" id="password" class="input-field" placeholder="Password">
+    <form id="authForm" onsubmit="event.preventDefault(); handleEmailLogin();" novalidate>
+      <div class="input-wrapper">
+        <input type="email" id="email" class="input-field" placeholder="Email Address" autocomplete="email" required>
+      </div>
+      <div class="error-msg" id="email-error"></div>
+      
+      <div class="input-wrapper">
+        <input type="password" id="password" class="input-field" placeholder="Password (min 6 chars)" autocomplete="current-password" required minlength="6">
+        <button type="button" class="password-toggle" id="passwordToggle" onclick="togglePassword()" aria-label="Show password">👁</button>
+      </div>
+      <div class="error-msg" id="password-error"></div>
+      
+      <a href="#" class="forgot-link" onclick="event.preventDefault(); handleForgotPassword();">Forgot password?</a>
+      
+      <button id="loginBtn" class="btn btn-primary" type="submit">Login</button>
+      <button id="signupBtn" class="btn btn-outline" type="button" onclick="handleSignUp()">Create Account</button>
+    </form>
     
-    <button id="loginBtn" class="btn btn-primary" onclick="handleEmailLogin()">Login</button>
-    <button id="signupBtn" class="btn btn-outline" onclick="handleSignUp()">Create Account</button>
+    <p class="footer-note">
+      By continuing, you agree to our care for your data. 🔒
+    </p>
   </div>
 </main>
 
 <script>
+  // ============ FIREBASE CONFIG (Same as before — tested & working) ============
   const firebaseConfig = {
     apiKey: "AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",
     authDomain: "helthchain.firebaseapp.com",
@@ -125,64 +152,277 @@ nav {
   const auth = firebase.auth();
   const db = firebase.firestore();
 
+  // ============ ELEMENTS ============
   const globalLoader = document.getElementById('global-loader');
+  const loaderText = document.getElementById('loader-text');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const loginBtn = document.getElementById('loginBtn');
+  const signupBtn = document.getElementById('signupBtn');
+  const googleBtn = document.getElementById('googleBtn');
+  const passwordToggle = document.getElementById('passwordToggle');
+  const emailError = document.getElementById('email-error');
+  const passwordError = document.getElementById('password-error');
+  const toast = document.getElementById('toast');
+  const toastMsg = document.getElementById('toast-msg');
+  const toastIcon = document.getElementById('toast-icon');
+
   let selectedRole = localStorage.getItem('selectedRole') || 'patient';
   selectRole(selectedRole); 
 
+  // ============ ROLE SELECTION ============
   function selectRole(role) {
     selectedRole = role;
     localStorage.setItem('selectedRole', role);
-    document.getElementById('patient-card').classList.toggle('active', role === 'patient');
-    document.getElementById('doctor-card').classList.toggle('active', role === 'doctor');
+    const patientCard = document.getElementById('patient-card');
+    const doctorCard = document.getElementById('doctor-card');
+    patientCard.classList.toggle('active', role === 'patient');
+    doctorCard.classList.toggle('active', role === 'doctor');
+    patientCard.setAttribute('aria-checked', role === 'patient');
+    doctorCard.setAttribute('aria-checked', role === 'doctor');
     document.getElementById('login-title').textContent = `Login as a ${role.charAt(0).toUpperCase() + role.slice(1)}`;
   }
 
-  // 1. CATCH REDIRECT (Ye white page wali loading handle karega)
+  // Keyboard accessibility for role cards
+  function handleRoleKey(event, role) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      selectRole(role);
+    }
+  }
+
+  // ============ PASSWORD TOGGLE ============
+  function togglePassword() {
+    const isPassword = passwordInput.type === 'password';
+    passwordInput.type = isPassword ? 'text' : 'password';
+    passwordToggle.textContent = isPassword ? '🙈' : '👁';
+    passwordToggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+  }
+
+  // ============ TOAST NOTIFICATIONS (instead of ugly alerts) ============
+  function showToast(message, type = 'info') {
+    toastMsg.textContent = message;
+    toastIcon.textContent = type === 'error' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️';
+    toast.className = `toast ${type} show`;
+    setTimeout(() => { toast.classList.remove('show'); }, 4000);
+  }
+
+  // ============ VALIDATION ============
+  function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  }
+
+  function showError(element, message) {
+    element.textContent = message;
+    element.classList.add('show');
+  }
+
+  function clearErrors() {
+    emailError.classList.remove('show');
+    passwordError.classList.remove('show');
+    emailInput.classList.remove('error');
+    passwordInput.classList.remove('error');
+  }
+
+  // Clear errors on input
+  emailInput.addEventListener('input', clearErrors);
+  passwordInput.addEventListener('input', clearErrors);
+
+  // ============ BUTTON LOADING STATES ============
+  function setButtonLoading(btn, isLoading, originalText) {
+    if (isLoading) {
+      btn.disabled = true;
+      btn.dataset.original = btn.innerHTML;
+      btn.innerHTML = '<span class="btn-spinner"></span> Please wait...';
+    } else {
+      btn.disabled = false;
+      if (btn.dataset.original) btn.innerHTML = btn.dataset.original;
+    }
+  }
+
+  // ============ FIREBASE ERROR MESSAGES (user-friendly) ============
+  function getErrorMessage(err) {
+    const code = err.code || '';
+    const map = {
+      'auth/invalid-email': 'Invalid email address',
+      'auth/user-not-found': 'No account found with this email. Create one below!',
+      'auth/wrong-password': 'Wrong password. Try again or reset.',
+      'auth/email-already-in-use': 'Account already exists. Try logging in.',
+      'auth/weak-password': 'Password too weak. Use at least 6 characters.',
+      'auth/network-request-failed': 'Network issue. Check your internet.',
+      'auth/too-many-requests': 'Too many attempts. Please wait a few minutes.',
+      'auth/popup-closed-by-user': 'Sign-in cancelled.',
+      'auth/invalid-credential': 'Invalid email or password.'
+    };
+    return map[code] || err.message || 'Something went wrong. Try again.';
+  }
+
+  // ============ 1. CATCH GOOGLE REDIRECT RESULT ============
   auth.getRedirectResult().then((result) => {
-    if (result.user) {
+    if (result && result.user) {
       const u = result.user;
+      loaderText.textContent = "Setting up your profile...";
       db.collection("users").doc(u.uid).set({
-        uid: u.uid, email: u.email, name: u.displayName || "User", role: selectedRole,
+        uid: u.uid, 
+        email: u.email, 
+        name: u.displayName || "User", 
+        role: selectedRole,
         lastLogin: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true }).then(() => {
         window.location.replace(selectedRole === 'patient' ? 'patient.html' : 'doctor.html');
+      }).catch((err) => {
+        globalLoader.style.display = 'none';
+        showToast(getErrorMessage(err), 'error');
       });
     }
   }).catch((err) => {
     globalLoader.style.display = 'none';
+    if (err.code && err.code !== 'auth/popup-closed-by-user') {
+      showToast(getErrorMessage(err), 'error');
+    }
   });
 
-  // 2. CHECK LOGIN STATUS
+  // ============ 2. CHECK LOGIN STATUS (auto-redirect) ============
   auth.onAuthStateChanged((user) => {
     if (user) {
-      window.location.replace(selectedRole === 'patient' ? 'patient.html' : 'doctor.html');
+      // Check user's saved role from Firestore (more reliable than localStorage)
+      db.collection("users").doc(user.uid).get().then((doc) => {
+        const savedRole = doc.exists && doc.data().role ? doc.data().role : selectedRole;
+        window.location.replace(savedRole === 'patient' ? 'patient.html' : 'doctor.html');
+      }).catch(() => {
+        // Fallback to localStorage role if Firestore fails
+        window.location.replace(selectedRole === 'patient' ? 'patient.html' : 'doctor.html');
+      });
     } else {
       setTimeout(() => { globalLoader.style.display = 'none'; }, 500);
     }
   });
 
-  // 3. START GOOGLE LOGIN (Mobile ke liye sabse safe tarika)
+  // ============ 3. GOOGLE LOGIN (Mobile-safe redirect) ============
   function handleGoogleLogin() {
     globalLoader.style.display = 'flex';
-    document.getElementById('loader-text').textContent = "Google se jhud raha hai...";
+    loaderText.textContent = "Connecting to Google...";
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithRedirect(provider);
+    auth.signInWithRedirect(provider).catch((err) => {
+      globalLoader.style.display = 'none';
+      showToast(getErrorMessage(err), 'error');
+    });
   }
 
+  // ============ 4. EMAIL SIGN UP ============
   function handleSignUp() {
-    const email = document.getElementById('email').value.trim();
-    const pass = document.getElementById('password').value.trim();
-    if(!email || !pass) return alert("Email aur Password daalein!");
+    clearErrors();
+    const email = emailInput.value.trim();
+    const pass = passwordInput.value;
+    
+    // Validation
+    if (!email) {
+      emailInput.classList.add('error');
+      showError(emailError, 'Email is required');
+      emailInput.focus();
+      return;
+    }
+    if (!validateEmail(email)) {
+      emailInput.classList.add('error');
+      showError(emailError, 'Please enter a valid email');
+      emailInput.focus();
+      return;
+    }
+    if (!pass) {
+      passwordInput.classList.add('error');
+      showError(passwordError, 'Password is required');
+      passwordInput.focus();
+      return;
+    }
+    if (pass.length < 6) {
+      passwordInput.classList.add('error');
+      showError(passwordError, 'Password must be at least 6 characters');
+      passwordInput.focus();
+      return;
+    }
+
+    setButtonLoading(signupBtn, true);
     auth.createUserWithEmailAndPassword(email, pass).then((userCred) => {
-      db.collection("users").doc(userCred.user.uid).set({ uid: userCred.user.uid, email: email, role: selectedRole });
-    }).catch(err => alert("Error: " + err.message));
+      return db.collection("users").doc(userCred.user.uid).set({
+        uid: userCred.user.uid, 
+        email: email, 
+        role: selectedRole,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }).then(() => {
+      showToast('Account created! Redirecting...', 'success');
+      // onAuthStateChanged will handle redirect
+    }).catch((err) => {
+      setButtonLoading(signupBtn, false);
+      showToast(getErrorMessage(err), 'error');
+    });
   }
 
+  // ============ 5. EMAIL LOGIN ============
   function handleEmailLogin() {
-    const email = document.getElementById('email').value.trim();
-    const pass = document.getElementById('password').value.trim();
-    if(!email || !pass) return alert("Email aur Password daalein!");
-    auth.signInWithEmailAndPassword(email, pass).catch(err => alert("Error: " + err.message));
+    clearErrors();
+    const email = emailInput.value.trim();
+    const pass = passwordInput.value;
+    
+    // Validation
+    if (!email) {
+      emailInput.classList.add('error');
+      showError(emailError, 'Email is required');
+      emailInput.focus();
+      return;
+    }
+    if (!validateEmail(email)) {
+      emailInput.classList.add('error');
+      showError(emailError, 'Please enter a valid email');
+      emailInput.focus();
+      return;
+    }
+    if (!pass) {
+      passwordInput.classList.add('error');
+      showError(passwordError, 'Password is required');
+      passwordInput.focus();
+      return;
+    }
+
+    setButtonLoading(loginBtn, true);
+    auth.signInWithEmailAndPassword(email, pass).then((userCred) => {
+      // Update last login
+      return db.collection("users").doc(userCred.user.uid).set({
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }).then(() => {
+      showToast('Logged in! Redirecting...', 'success');
+      // onAuthStateChanged will handle redirect
+    }).catch((err) => {
+      setButtonLoading(loginBtn, false);
+      showToast(getErrorMessage(err), 'error');
+    });
+  }
+
+  // ============ 6. FORGOT PASSWORD ============
+  function handleForgotPassword() {
+    const email = emailInput.value.trim();
+    
+    if (!email) {
+      emailInput.classList.add('error');
+      showError(emailError, 'Enter your email first, then click Forgot password');
+      emailInput.focus();
+      return;
+    }
+    if (!validateEmail(email)) {
+      emailInput.classList.add('error');
+      showError(emailError, 'Please enter a valid email');
+      emailInput.focus();
+      return;
+    }
+
+    auth.sendPasswordResetEmail(email).then(() => {
+      showToast('Password reset email sent! Check your inbox.', 'success');
+    }).catch((err) => {
+      showToast(getErrorMessage(err), 'error');
+    });
   }
 </script>
 </body>

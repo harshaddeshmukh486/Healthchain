@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Period Tracker — HealthChain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060a12;--surface:#0d1520;--surface2:#141f30;--border:#1a2535;--accent:#00d4ff;--accent2:#7c3aed;--text:#e8f0ff;--text-muted:#6b7a99;--success:#10b981;--danger:#ef4444;--warning:#f59e0b;--pink:#ec4899;--pink-light:rgba(236,72,153,0.1)}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+#global-loader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.spinner{border:4px solid rgba(0,212,255,0.1);border-top:4px solid var(--accent);border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite}
+.btn-spinner{border:2px solid rgba(255,255,255,0.3);border-top:2px solid white;border-radius:50%;width:14px;height:14px;animation:spin 0.8s linear infinite;display:inline-block}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 5%;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);text-decoration:none}
+.logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.back-btn{background:transparent;color:var(--text-muted);text-decoration:none;font-size:0.9rem;padding:8px 14px;border:1px solid var(--border);border-radius:8px}
+.container{max-width:900px;margin:0 auto;padding:30px 20px;width:100%;flex:1}
+.header{margin-bottom:25px;text-align:center}
+.header h1{font-family:'Syne',sans-serif;font-size:2rem;margin-bottom:6px}
+.header h1 span{background:linear-gradient(135deg,var(--pink),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--text-muted);font-size:0.95rem}
+
+.privacy-banner{background:var(--pink-light);border:1px solid rgba(236,72,153,0.3);border-radius:12px;padding:14px 16px;margin-bottom:25px;display:flex;gap:12px;align-items:flex-start}
+.privacy-banner .icon{font-size:1.3rem;flex-shrink:0}
+.privacy-content{font-size:0.85rem;color:var(--text-muted);line-height:1.5}
+.privacy-content strong{color:var(--pink)}
+
+.cycle-overview{background:linear-gradient(135deg,rgba(236,72,153,0.05),rgba(124,58,237,0.05));border:1px solid rgba(236,72,153,0.2);border-radius:20px;padding:30px 20px;margin-bottom:25px;text-align:center}
+.cycle-day{font-family:'Syne',sans-serif;font-size:3.5rem;font-weight:800;background:linear-gradient(135deg,var(--pink),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+.cycle-label{color:var(--text-muted);font-size:0.85rem;margin-top:6px;margin-bottom:18px}
+.phase-badge{display:inline-block;padding:8px 18px;border-radius:50px;font-size:0.85rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px}
+.phase-menstrual{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.3)}
+.phase-follicular{background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.3)}
+.phase-ovulation{background:rgba(245,158,11,0.1);color:var(--warning);border:1px solid rgba(245,158,11,0.3)}
+.phase-luteal{background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.3)}
+.phase-unknown{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)}
+.cycle-info-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px;max-width:500px;margin-left:auto;margin-right:auto}
+.cycle-info-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px}
+.cycle-info-card h4{font-size:0.78rem;color:var(--text-muted);margin-bottom:4px;font-weight:500}
+.cycle-info-card p{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--pink)}
+
+.action-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:25px}
+.action-btn-big{padding:18px;border-radius:14px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:0.95rem;display:flex;align-items:center;justify-content:center;gap:10px;transition:0.2s}
+.action-btn-big:hover{border-color:var(--pink);transform:translateY(-2px)}
+.action-btn-big.primary{background:linear-gradient(135deg,var(--pink),var(--accent2));color:white;border:none}
+.action-btn-big .icon{font-size:1.4rem}
+
+.section-title{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:15px;display:flex;align-items:center;gap:8px}
+
+.calendar{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:25px}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.cal-header h3{font-family:'Syne',sans-serif;font-size:1.05rem}
+.cal-nav{display:flex;gap:6px}
+.cal-nav-btn{width:32px;height:32px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;font-family:inherit}
+.cal-nav-btn:hover{border-color:var(--pink)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal-day-name{text-align:center;font-size:0.72rem;color:var(--text-muted);font-weight:600;padding:6px 0;text-transform:uppercase}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--surface2);font-size:0.8rem;font-weight:600;cursor:pointer;border:1px solid transparent;transition:0.2s}
+.cal-day:hover{border-color:var(--pink)}
+.cal-day.empty{background:transparent;cursor:default}
+.cal-day.empty:hover{border-color:transparent}
+.cal-day.period{background:var(--pink);color:white}
+.cal-day.predicted{background:rgba(236,72,153,0.2);color:var(--pink);border:1px dashed var(--pink)}
+.cal-day.ovulation{background:rgba(245,158,11,0.2);color:var(--warning);border:1px solid var(--warning)}
+.cal-day.fertile{background:rgba(16,185,129,0.1);color:var(--success)}
+.cal-day.today{outline:2px solid var(--accent);outline-offset:1px}
+.cal-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:0.78rem;color:var(--text-muted)}
+.cal-legend-item{display:flex;align-items:center;gap:6px}
+.legend-dot{width:14px;height:14px;border-radius:4px}
+
+.history-list{display:grid;gap:10px;margin-bottom:25px}
+.history-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.history-card:hover{border-color:var(--pink)}
+.hist-info{flex:1;min-width:0}
+.hist-date{font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;margin-bottom:3px}
+.hist-meta{font-size:0.82rem;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:10px}
+.hist-actions{display:flex;gap:6px;flex-shrink:0}
+.icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
+.icon-btn:hover{color:var(--text)}
+.icon-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+
+.empty-state{text-align:center;padding:35px 20px;color:var(--text-muted);background:var(--surface);border-radius:12px;border:1px dashed var(--border)}
+.empty-state .emoji{font-size:2.5rem;margin-bottom:10px}
+
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:25px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-family:'Syne',sans-serif;margin-bottom:18px;font-size:1.25rem}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;margin-bottom:6px;color:var(--text-muted);font-size:0.85rem}
+.input-field{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:white;outline:none;font-family:inherit;font-size:0.9rem}
+.input-field:focus{border-color:var(--pink)}
+select.input-field{appearance:none;background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;cursor:pointer}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.symptom-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+.symptom-chip{padding:7px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:50px;cursor:pointer;font-size:0.8rem;transition:0.2s;color:var(--text)}
+.symptom-chip:hover{border-color:var(--pink)}
+.symptom-chip.active{background:var(--pink-light);border-color:var(--pink);color:var(--pink)}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.btn{padding:12px 22px;border-radius:50px;font-weight:600;cursor:pointer;border:none;font-size:0.92rem;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--pink),var(--accent2));color:white;flex:1}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-muted)}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;z-index:10002;max-width:90%;min-width:280px;transition:transform 0.3s;font-size:0.9rem;display:flex;align-items:center;gap:10px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.toast.success{border-color:var(--success);color:var(--success)}
+.toast.info{border-color:var(--pink);color:var(--pink)}
+@media(max-width:600px){.action-row{grid-template-columns:1fr}.cycle-info-row{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="global-loader"><div class="spinner"></div><p style="margin-top:20px;color:var(--text-muted)">Loading...</p></div>
+<div id="toast" class="toast"><span id="toast-icon">ℹ️</span><span id="toast-msg"></span></div>
+
+<div id="logModal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+<h3 id="modalTitle">🌸 Log Period</h3>
+<form id="logForm" onsubmit="event.preventDefault();saveLog()">
+<input type="hidden" id="logId">
+<div class="form-grid">
+<div class="form-group">
+<label>Start Date *</label>
+<input type="date" id="startDate" class="input-field" required>
+</div>
+<div class="form-group">
+<label>End Date</label>
+<input type="date" id="endDate" class="input-field">
+</div>
+</div>
+<div class="form-group">
+<label>Flow Intensity</label>
+<select id="flow" class="input-field">
+<option value="">Select</option>
+<option value="Light">💧 Light</option>
+<option value="Medium">💧💧 Medium</option>
+<option value="Heavy">💧💧💧 Heavy</option>
+<option value="Spotting">✨ Spotting</option>
+</select>
+</div>
+<div class="form-group">
+<label>Symptoms (Tap to add)</label>
+<div class="symptom-chips" id="symptomChips">
+<div class="symptom-chip" onclick="toggleSymptom(this,'Cramps')">😣 Cramps</div>
+<div class="symptom-chip" onclick="toggleSymptom(this,'Headache')">🤕 Headache</div>
+<div class="symptom-chip" onclick="toggleSymptom(this,'Bloating')">😶 Bloating</div>
+<div class="symptom-chip" onclick="toggleSymptom(this,'Fatigue')">😪 Fatigue</div>
+<div class="symptom-chip" onclick="toggleSymptom(this,'Mood swings')">😢 Mood swings</div>
+<div class="symptom-chip" onclick="toggleSymptom(this,'Acne')">🌹 Acne</div>
+<div class="symptom-chip" onclick="toggleSymptom(this,'Back pain')">💪 Back pain</div>
+<div class="symptom-chip" onclick="toggleSymptom(this,'Tender breasts')">🤱 Tender breasts</div>
+<div class="symptom-chip" onclick="toggleSymptom(this,'Cravings')">🍫 Cravings</div>
+<div class="symptom-chip" onclick="toggleSymptom(this,'Nausea')">🤢 Nausea</div>
+</div>
+</div>
+<div class="form-group">
+<label>Mood</label>
+<select id="mood" class="input-field">
+<option value="">Select</option>
+<option value="Happy">😊 Happy</option>
+<option value="Calm">😌 Calm</option>
+<option value="Sad">😢 Sad</option>
+<option value="Anxious">😰 Anxious</option>
+<option value="Irritable">😠 Irritable</option>
+<option value="Energetic">⚡ Energetic</option>
+<option value="Tired">😴 Tired</option>
+</select>
+</div>
+<div class="form-group">
+<label>Notes</label>
+<input type="text" id="notes" class="input-field" placeholder="Any other observations" maxlength="200">
+</div>
+<div class="modal-actions">
+<button type="submit" class="btn btn-primary" id="saveBtn">💾 Save</button>
+<button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<nav>
+<a href="index.html" class="logo">Health<span>Chain</span></a>
+<a href="patient.html" class="back-btn">← Back</a>
+</nav>
+
+<div class="container">
+<div class="header">
+<h1>🌸 <span>Period Tracker</span></h1>
+<p>Track your cycle, symptoms, and predict your next period.</p>
+</div>
+
+<div class="privacy-banner">
+<div class="icon">🔒</div>
+<div class="privacy-content">
+<strong>Your data is private:</strong> Period info is stored securely under your account only. Not shared with anyone, including doctors, unless you explicitly grant access.
+</div>
+</div>
+
+<div class="cycle-overview">
+<div class="phase-badge phase-unknown" id="phaseBadge">Add your first period to start</div>
+<div class="cycle-day" id="cycleDay">-</div>
+<div class="cycle-label" id="cycleLabel">No data yet</div>
+<div class="cycle-info-row">
+<div class="cycle-info-card"><h4>NEXT PERIOD</h4><p id="nextPeriod">-</p></div>
+<div class="cycle-info-card"><h4>OVULATION</h4><p id="ovulation">-</p></div>
+<div class="cycle-info-card"><h4>AVG CYCLE</h4><p id="avgCycle">-</p></div>
+</div>
+</div>
+
+<div class="action-row">
+<button class="action-btn-big primary" onclick="openModal()">
+<span class="icon">+</span>
+<span>Log Period</span>
+</button>
+<button class="action-btn-big" onclick="logToday()">
+<span class="icon">📅</span>
+<span>Period Started Today</span>
+</button>
+</div>
+
+<div class="section-title">📅 Calendar View</div>
+<div class="calendar">
+<div class="cal-header">
+<h3 id="calMonth">-</h3>
+<div class="cal-nav">
+<button class="cal-nav-btn" onclick="navMonth(-1)">‹</button>
+<button class="cal-nav-btn" onclick="navMonth(1)">›</button>
+</div>
+</div>
+<div class="cal-grid" id="calGrid"></div>
+<div class="cal-legend">
+<div class="cal-legend-item"><div class="legend-dot" style="background:var(--pink)"></div>Period</div>
+<div class="cal-legend-item"><div class="legend-dot" style="background:rgba(236,72,153,0.2);border:1px dashed var(--pink)"></div>Predicted</div>
+<div class="cal-legend-item"><div class="legend-dot" style="background:rgba(245,158,11,0.2);border:1px solid var(--warning)"></div>Ovulation</div>
+<div class="cal-legend-item"><div class="legend-dot" style="background:rgba(16,185,129,0.1)"></div>Fertile</div>
+</div>
+</div>
+
+<div class="section-title">📋 Period History</div>
+<div class="history-list" id="historyList">
+<div class="empty-state"><div class="emoji">🌸</div><p>No periods logged yet.</p><p style="margin-top:6px;font-size:0.82rem">Tap "Log Period" to start tracking.</p></div>
+</div>
+
+</div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",authDomain:"helthchain.firebaseapp.com",projectId:"helthchain",storageBucket:"helthchain.appspot.com",messagingSenderId:"682542534348",appId:"1:682542534348:web:bedb3583d7d2eb49a57c69"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+let currentUser=null;
+let editingId=null;
+let selectedSymptoms=[];
+let allPeriods=[];
+let calMonth=new Date();
+const toast=document.getElementById('toast');
+const toastMsg=document.getElementById('toast-msg');
+const toastIcon=document.getElementById('toast-icon');
+let toastTimeout=null;
+function showToast(m,t='info'){clearTimeout(toastTimeout);toastMsg.textContent=m;toastIcon.textContent=t==='error'?'⚠️':t==='success'?'✅':'ℹ️';toast.className=`toast ${t} show`;toastTimeout=setTimeout(()=>{toast.classList.remove('show')},4000)}
+function escapeHtml(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+
+auth.onAuthStateChanged(async u=>{
+  if(!u){window.location.replace('login.html');return}
+  currentUser=u;
+  document.getElementById('global-loader').style.display='none';
+  loadPeriods();
+});
+
+function openModal(){
+  editingId=null;
+  selectedSymptoms=[];
+  document.getElementById('modalTitle').textContent='🌸 Log Period';
+  document.getElementById('logForm').reset();
+  document.getElementById('startDate').value=new Date().toISOString().split('T')[0];
+  document.querySelectorAll('.symptom-chip').forEach(c=>c.classList.remove('active'));
+  document.getElementById('logModal').classList.add('show');
+}
+function closeModal(){document.getElementById('logModal').classList.remove('show');editingId=null}
+function toggleSymptom(el,s){el.classList.toggle('active');if(el.classList.contains('active')){if(!selectedSymptoms.includes(s))selectedSymptoms.push(s)}else{selectedSymptoms=selectedSymptoms.filter(x=>x!==s)}}
+
+async function logToday(){
+  const today=new Date().toISOString().split('T')[0];
+  // Check if today already logged
+  const exists=allPeriods.find(p=>p.startDate===today);
+  if(exists){showToast('Today already logged','info');return}
+  try{
+    await db.collection('period_logs').add({
+      patientId:currentUser.uid,
+      patientEmail:currentUser.email.toLowerCase(),
+      startDate:today,
+      endDate:null,
+      flow:null,
+      symptoms:[],
+      mood:null,
+      notes:null,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast('Period logged for today! 🌸','success');
+  }catch(e){showToast('Error: '+e.message,'error')}
+}
+
+async function saveLog(){
+  const sb=document.getElementById('saveBtn');
+  const sd=document.getElementById('startDate').value;
+  if(!sd){showToast('Start date required','error');return}
+  const oh=sb.innerHTML;sb.disabled=true;sb.innerHTML='<span class="btn-spinner"></span> Saving...';
+  try{
+    const data={
+      patientId:currentUser.uid,
+      patientEmail:currentUser.email.toLowerCase(),
+      startDate:sd,
+      endDate:document.getElementById('endDate').value||null,
+      flow:document.getElementById('flow').value||null,
+      symptoms:selectedSymptoms,
+      mood:document.getElementById('mood').value||null,
+      notes:document.getElementById('notes').value.trim()||null,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if(editingId){await db.collection('period_logs').doc(editingId).update(data);showToast('Updated','success')}
+    else{data.createdAt=firebase.firestore.FieldValue.serverTimestamp();await db.collection('period_logs').add(data);showToast('Saved 🌸','success')}
+    closeModal();
+  }catch(e){showToast('Error: '+e.message,'error')}
+  finally{sb.disabled=false;sb.innerHTML=oh}
+}
+
+function loadPeriods(){
+  db.collection('period_logs').where('patientId','==',currentUser.uid).onSnapshot(q=>{
+    allPeriods=[];
+    q.forEach(d=>allPeriods.push({id:d.id,...d.data()}));
+    allPeriods.sort((a,b)=>new Date(a.startDate)-new Date(b.startDate));
+    updateOverview();
+    renderCalendar();
+    renderHistory();
+  },err=>{showToast('Could not load: '+err.message,'error')});
+}
+
+function calculateCycleStats(){
+  if(allPeriods.length<2)return{avgCycle:28,nextPeriod:null,ovulation:null,currentDay:null,phase:'unknown'};
+  
+  const cycles=[];
+  for(let i=1;i<allPeriods.length;i++){
+    const days=Math.floor((new Date(allPeriods[i].startDate)-new Date(allPeriods[i-1].startDate))/(1000*60*60*24));
+    if(days>15&&days<60)cycles.push(days);
+  }
+  
+  const avgCycle=cycles.length>0?Math.round(cycles.reduce((a,b)=>a+b,0)/cycles.length):28;
+  const last=allPeriods[allPeriods.length-1];
+  const lastDate=new Date(last.startDate);
+  
+  const nextPeriod=new Date(lastDate);
+  nextPeriod.setDate(nextPeriod.getDate()+avgCycle);
+  
+  const ovulation=new Date(lastDate);
+  ovulation.setDate(ovulation.getDate()+avgCycle-14);
+  
+  const today=new Date();today.setHours(0,0,0,0);
+  const daysSinceLast=Math.floor((today-lastDate)/(1000*60*60*24));
+  const currentDay=daysSinceLast+1;
+  
+  let phase='unknown';
+  if(currentDay>=1&&currentDay<=5)phase='menstrual';
+  else if(currentDay>=6&&currentDay<=13)phase='follicular';
+  else if(currentDay>=14&&currentDay<=16)phase='ovulation';
+  else if(currentDay>=17&&currentDay<=avgCycle)phase='luteal';
+  
+  return{avgCycle,nextPeriod,ovulation,currentDay,phase};
+}
+
+function updateOverview(){
+  const stats=calculateCycleStats();
+  if(allPeriods.length===0){
+    document.getElementById('cycleDay').textContent='-';
+    document.getElementById('cycleLabel').textContent='No data yet';
+    document.getElementById('nextPeriod').textContent='-';
+    document.getElementById('ovulation').textContent='-';
+    document.getElementById('avgCycle').textContent='-';
+    return;
+  }
+  
+  if(stats.currentDay&&stats.currentDay>0){
+    document.getElementById('cycleDay').textContent=`Day ${stats.currentDay}`;
+    document.getElementById('cycleLabel').textContent='of your current cycle';
+  }else{
+    document.getElementById('cycleDay').textContent=allPeriods.length;
+    document.getElementById('cycleLabel').textContent='periods logged';
+  }
+  
+  const phaseLabels={menstrual:'🩸 Menstrual Phase',follicular:'🌱 Follicular Phase',ovulation:'⚡ Ovulation',luteal:'🌙 Luteal Phase',unknown:'📊 Track to predict'};
+  const phaseClasses={menstrual:'phase-menstrual',follicular:'phase-follicular',ovulation:'phase-ovulation',luteal:'phase-luteal',unknown:'phase-unknown'};
+  const badge=document.getElementById('phaseBadge');
+  badge.className='phase-badge '+phaseClasses[stats.phase];
+  badge.textContent=phaseLabels[stats.phase];
+  
+  document.getElementById('nextPeriod').textContent=stats.nextPeriod?stats.nextPeriod.toLocaleDateString('en-IN',{day:'numeric',month:'short'}):'-';
+  document.getElementById('ovulation').textContent=stats.ovulation?stats.ovulation.toLocaleDateString('en-IN',{day:'numeric',month:'short'}):'-';
+  document.getElementById('avgCycle').textContent=stats.avgCycle+' days';
+}
+
+function navMonth(dir){
+  calMonth.setMonth(calMonth.getMonth()+dir);
+  renderCalendar();
+}
+
+function renderCalendar(){
+  const year=calMonth.getFullYear();
+  const month=calMonth.getMonth();
+  const monthName=calMonth.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  document.getElementById('calMonth').textContent=monthName;
+  
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const today=new Date();today.setHours(0,0,0,0);
+  
+  const stats=calculateCycleStats();
+  const periodDates=new Set();
+  const predictedDates=new Set();
+  const ovulationDates=new Set();
+  const fertileDates=new Set();
+  
+  // Mark logged periods
+  allPeriods.forEach(p=>{
+    const start=new Date(p.startDate);
+    const end=p.endDate?new Date(p.endDate):new Date(start.getTime()+5*24*60*60*1000);
+    for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
+      if(d.getMonth()===month&&d.getFullYear()===year)periodDates.add(d.getDate());
+    }
+  });
+  
+  // Predict next periods
+  if(allPeriods.length>=2&&stats.nextPeriod){
+    for(let i=0;i<3;i++){
+      const predicted=new Date(stats.nextPeriod);
+      predicted.setDate(predicted.getDate()+i*stats.avgCycle);
+      for(let d=0;d<5;d++){
+        const date=new Date(predicted);date.setDate(date.getDate()+d);
+        if(date.getMonth()===month&&date.getFullYear()===year&&!periodDates.has(date.getDate()))predictedDates.add(date.getDate());
+      }
+      // Ovulation
+      const ov=new Date(predicted);ov.setDate(ov.getDate()-14);
+      if(ov.getMonth()===month&&ov.getFullYear()===year)ovulationDates.add(ov.getDate());
+      // Fertile window (5 days before ovulation + ovulation day)
+      for(let d=-5;d<=1;d++){
+        const fd=new Date(ov);fd.setDate(fd.getDate()+d);
+        if(fd.getMonth()===month&&fd.getFullYear()===year&&!ovulationDates.has(fd.getDate())&&!periodDates.has(fd.getDate())&&!predictedDates.has(fd.getDate()))fertileDates.add(fd.getDate());
+      }
+    }
+  }
+  
+  let html=`<div class="cal-day-name">Sun</div><div class="cal-day-name">Mon</div><div class="cal-day-name">Tue</div><div class="cal-day-name">Wed</div><div class="cal-day-name">Thu</div><div class="cal-day-name">Fri</div><div class="cal-day-name">Sat</div>`;
+  
+  for(let i=0;i<firstDay;i++)html+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const date=new Date(year,month,d);
+    let cls='cal-day';
+    if(date.getTime()===today.getTime())cls+=' today';
+    if(periodDates.has(d))cls+=' period';
+    else if(predictedDates.has(d))cls+=' predicted';
+    else if(ovulationDates.has(d))cls+=' ovulation';
+    else if(fertileDates.has(d))cls+=' fertile';
+    html+=`<div class="${cls}">${d}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML=html;
+}
+
+function renderHistory(){
+  const c=document.getElementById('historyList');
+  if(allPeriods.length===0){c.innerHTML=`<div class="empty-state"><div class="emoji">🌸</div><p>No periods logged yet.</p><p style="margin-top:6px;font-size:0.82rem">Tap "Log Period" to start tracking.</p></div>`;return}
+  let html='';
+  [...allPeriods].reverse().slice(0,15).forEach(p=>{
+    const start=new Date(p.startDate);
+    const dateStr=start.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+    let duration='';
+    if(p.endDate){
+      const days=Math.floor((new Date(p.endDate)-start)/(1000*60*60*24))+1;
+      duration=`${days} day${days!==1?'s':''}`;
+    }
+    html+=`<div class="history-card"><div class="hist-info"><div class="hist-date">🌸 ${dateStr}</div><div class="hist-meta">${duration?`<span>⏱️ ${duration}</span>`:''}${p.flow?`<span>💧 ${escapeHtml(p.flow)}</span>`:''}${p.mood?`<span>${escapeHtml(p.mood)}</span>`:''}${p.symptoms&&p.symptoms.length?`<span>📝 ${p.symptoms.length} symptoms</span>`:''}</div></div><div class="hist-actions"><button class="icon-btn" onclick="editLog('${escapeHtml(p.id)}')">✏️</button><button class="icon-btn danger" onclick="deleteLog('${escapeHtml(p.id)}','${dateStr}')">🗑️</button></div></div>`;
+  });
+  c.innerHTML=html;
+}
+
+async function editLog(id){
+  try{
+    const doc=await db.collection('period_logs').doc(id).get();
+    if(!doc.exists)return;
+    const p=doc.data();
+    editingId=id;
+    selectedSymptoms=[...(p.symptoms||[])];
+    document.getElementById('modalTitle').textContent='✏️ Edit Period';
+    document.getElementById('startDate').value=p.startDate||'';
+    document.getElementById('endDate').value=p.endDate||'';
+    document.getElementById('flow').value=p.flow||'';
+    document.getElementById('mood').value=p.mood||'';
+    document.getElementById('notes').value=p.notes||'';
+    document.querySelectorAll('.symptom-chip').forEach(c=>{
+      c.classList.toggle('active',selectedSymptoms.includes(c.textContent.replace(/^[^\s]+\s/,'')));
+    });
+    document.getElementById('logModal').classList.add('show');
+  }catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+async function deleteLog(id,date){
+  if(!confirm(`Delete period from ${date}?`))return;
+  try{await db.collection('period_logs').doc(id).delete();showToast('Deleted','success')}
+  catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+</script>
+</body>
+</html>

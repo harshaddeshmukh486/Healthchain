@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Emergency SOS — HealthChain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060a12;--surface:#0d1520;--surface2:#141f30;--border:#1a2535;--accent:#00d4ff;--accent2:#7c3aed;--text:#e8f0ff;--text-muted:#6b7a99;--success:#10b981;--danger:#ef4444;--warning:#f59e0b}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+#global-loader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.spinner{border:4px solid rgba(0,212,255,0.1);border-top:4px solid var(--accent);border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite}
+.btn-spinner{border:2px solid rgba(255,255,255,0.3);border-top:2px solid white;border-radius:50%;width:14px;height:14px;animation:spin 0.8s linear infinite;display:inline-block}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,0.7)}50%{transform:scale(1.05);box-shadow:0 0 0 25px rgba(239,68,68,0)}}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 5%;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);text-decoration:none}
+.logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.back-btn{background:transparent;color:var(--text-muted);text-decoration:none;font-size:0.9rem;padding:8px 14px;border:1px solid var(--border);border-radius:8px}
+.container{max-width:1000px;margin:0 auto;padding:30px 20px;width:100%;flex:1}
+.header{text-align:center;margin-bottom:30px}
+.header h1{font-family:'Syne',sans-serif;font-size:2.2rem;margin-bottom:8px;color:var(--danger)}
+.header p{color:var(--text-muted);font-size:1rem;max-width:600px;margin:0 auto}
+
+.sos-section{display:flex;flex-direction:column;align-items:center;background:linear-gradient(135deg,rgba(239,68,68,0.05),rgba(245,158,11,0.05));border:2px solid rgba(239,68,68,0.3);border-radius:24px;padding:30px;margin-bottom:30px}
+.sos-button{width:200px;height:200px;border-radius:50%;background:linear-gradient(135deg,#ef4444,#dc2626);border:none;color:white;font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;cursor:pointer;animation:pulse 2s infinite;box-shadow:0 10px 40px rgba(239,68,68,0.4);margin-bottom:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:0.2s}
+.sos-button:active{transform:scale(0.95)}
+.sos-button .emoji{font-size:3rem}
+.sos-desc{text-align:center;color:var(--text-muted);font-size:0.9rem;line-height:1.5;max-width:500px}
+.sos-desc strong{color:var(--danger)}
+
+.section-title{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:10px}
+
+.national-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:35px}
+.national-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;text-decoration:none;color:var(--text);display:flex;align-items:center;gap:14px;transition:0.2s}
+.national-card:hover{border-color:var(--danger);transform:translateY(-3px);box-shadow:0 10px 30px rgba(239,68,68,0.15)}
+.national-icon{width:50px;height:50px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:rgba(239,68,68,0.1);color:var(--danger);flex-shrink:0}
+.national-info{flex:1;min-width:0}
+.national-info h4{font-family:'Syne',sans-serif;font-size:1rem;margin-bottom:2px}
+.national-info .number{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:var(--danger);letter-spacing:1px}
+.national-info p{color:var(--text-muted);font-size:0.75rem}
+
+.add-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;padding:13px 26px;border-radius:50px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;display:inline-flex;align-items:center;gap:8px;margin-bottom:25px}
+.add-btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,212,255,0.3)}
+.contacts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:35px}
+.contact-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;align-items:center;gap:14px;transition:0.2s}
+.contact-card:hover{border-color:var(--accent)}
+.contact-card.primary{border-color:var(--accent);background:linear-gradient(135deg,rgba(0,212,255,0.05),rgba(124,58,237,0.05))}
+.contact-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0}
+.contact-info{flex:1;min-width:0}
+.contact-name{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:2px}
+.contact-rel{color:var(--accent);font-size:0.78rem;font-weight:600;margin-bottom:4px}
+.contact-phone{color:var(--text);font-size:0.88rem;font-family:monospace;letter-spacing:1px}
+.contact-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.icon-btn{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1rem}
+.icon-btn:hover{border-color:var(--accent)}
+.icon-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.icon-btn.call{background:rgba(16,185,129,0.1);color:var(--success);border-color:rgba(16,185,129,0.3)}
+.icon-btn.call:hover{background:var(--success);color:white}
+
+.medical-info-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:25px}
+.med-info-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:0.9rem;flex-wrap:wrap;gap:10px}
+.med-info-row:last-child{border-bottom:none}
+.med-info-row span:first-child{color:var(--text-muted);font-weight:500}
+.med-info-row span:last-child{color:var(--text);font-weight:600;text-align:right}
+
+.empty-state{text-align:center;padding:30px 20px;color:var(--text-muted);background:var(--surface);border-radius:14px;border:1px dashed var(--border);grid-column:1/-1}
+
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:25px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-family:'Syne',sans-serif;margin-bottom:18px;font-size:1.25rem}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;margin-bottom:6px;color:var(--text-muted);font-size:0.85rem}
+.input-field{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:white;outline:none;font-family:inherit;font-size:0.9rem}
+.input-field:focus{border-color:var(--accent)}
+select.input-field{appearance:none;background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;cursor:pointer}
+.checkbox-group{display:flex;align-items:center;gap:8px;background:var(--surface2);padding:10px 14px;border-radius:10px;border:1px solid var(--border)}
+.checkbox-group input[type="checkbox"]{width:18px;height:18px;cursor:pointer;accent-color:var(--accent)}
+.checkbox-group label{margin:0;color:var(--text);font-size:0.88rem;cursor:pointer}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.btn{padding:12px 22px;border-radius:50px;font-weight:600;cursor:pointer;border:none;font-size:0.92rem;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;flex:1}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-muted)}
+
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;z-index:10002;max-width:90%;min-width:280px;transition:transform 0.3s;font-size:0.9rem;display:flex;align-items:center;gap:10px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.toast.success{border-color:var(--success);color:var(--success)}
+.toast.info{border-color:var(--accent);color:var(--accent)}
+
+.sos-confirm-modal .modal{border:2px solid var(--danger);text-align:center}
+.sos-confirm-modal h3{color:var(--danger);font-size:1.5rem;margin-bottom:14px}
+.sos-confirm-modal p{color:var(--text);font-size:0.95rem;line-height:1.5;margin-bottom:20px}
+.countdown{font-family:'Syne',sans-serif;font-size:3.5rem;font-weight:800;color:var(--danger);margin:15px 0}
+
+.share-info{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2);border-radius:10px;padding:12px;font-size:0.8rem;color:var(--text-muted);line-height:1.5;margin-bottom:20px}
+.share-info strong{color:var(--accent)}
+@media(max-width:600px){.sos-button{width:170px;height:170px;font-size:1.5rem}.sos-button .emoji{font-size:2.5rem}}
+</style>
+</head>
+<body>
+<div id="global-loader"><div class="spinner"></div><p style="margin-top:20px;color:var(--text-muted)">Loading...</p></div>
+<div id="toast" class="toast"><span id="toast-icon">ℹ️</span><span id="toast-msg"></span></div>
+
+<!-- SOS Confirm Modal -->
+<div id="sosConfirmModal" class="modal-overlay sos-confirm-modal">
+<div class="modal">
+<div style="font-size:4rem;margin-bottom:10px">🚨</div>
+<h3>EMERGENCY SOS</h3>
+<p>Calling <strong style="color:var(--danger)">112</strong> in...</p>
+<div class="countdown" id="countdown">5</div>
+<p style="font-size:0.85rem;color:var(--text-muted)">Your location and medical info will be shared with emergency contacts</p>
+<div class="modal-actions" style="margin-top:24px">
+<button class="btn btn-primary" id="callNowBtn" onclick="callEmergencyNow()" style="background:linear-gradient(135deg,#ef4444,#dc2626)">📞 Call Now</button>
+<button class="btn btn-outline" onclick="cancelSOS()">Cancel</button>
+</div>
+</div>
+</div>
+
+<!-- Add Contact Modal -->
+<div id="contactModal" class="modal-overlay" onclick="if(event.target===this)closeContactModal()">
+<div class="modal">
+<h3 id="contactTitle">📞 Add Emergency Contact</h3>
+<form id="contactForm" onsubmit="event.preventDefault();saveContact()">
+<input type="hidden" id="contactId">
+<div class="form-group">
+<label>Full Name *</label>
+<input type="text" id="contactName" class="input-field" placeholder="Contact name" maxlength="100" required>
+</div>
+<div class="form-group">
+<label>Relationship *</label>
+<select id="contactRel" class="input-field" required>
+<option value="">Select</option>
+<option value="Father">👨 Father</option>
+<option value="Mother">👩 Mother</option>
+<option value="Spouse">💑 Spouse</option>
+<option value="Brother">👨 Brother</option>
+<option value="Sister">👩 Sister</option>
+<option value="Son">👦 Son</option>
+<option value="Daughter">👧 Daughter</option>
+<option value="Family Doctor">🩺 Family Doctor</option>
+<option value="Neighbor">🏡 Neighbor</option>
+<option value="Friend">👤 Friend</option>
+<option value="Other">👤 Other</option>
+</select>
+</div>
+<div class="form-group">
+<label>Phone Number *</label>
+<input type="tel" id="contactPhone" class="input-field" placeholder="10-digit number" pattern="[0-9]{10}" maxlength="10" required>
+</div>
+<div class="form-group">
+<label>Address (Optional)</label>
+<input type="text" id="contactAddress" class="input-field" placeholder="For ambulance dispatch" maxlength="200">
+</div>
+<div class="form-group">
+<div class="checkbox-group">
+<input type="checkbox" id="contactPrimary">
+<label for="contactPrimary">⭐ Mark as Primary Emergency Contact</label>
+</div>
+</div>
+<div class="modal-actions">
+<button type="submit" class="btn btn-primary" id="saveContactBtn">💾 Save Contact</button>
+<button type="button" class="btn btn-outline" onclick="closeContactModal()">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<nav>
+<a href="index.html" class="logo">Health<span>Chain</span></a>
+<a href="patient.html" class="back-btn">← Back</a>
+</nav>
+
+<div class="container">
+<div class="header">
+<h1>🚨 Emergency SOS</h1>
+<p>One-tap access to emergency services and your trusted contacts.</p>
+</div>
+
+<!-- SOS Button -->
+<div class="sos-section">
+<button class="sos-button" onclick="triggerSOS()">
+<span class="emoji">🚨</span>
+<span>SOS</span>
+<span style="font-size:0.7rem;font-weight:400">TAP FOR HELP</span>
+</button>
+<div class="sos-desc">
+<strong>5-second countdown</strong> before calling India Emergency Number <strong>112</strong>. 
+Your medical info & location will be sent to your emergency contacts.
+</div>
+</div>
+
+<!-- National Emergency Numbers -->
+<div class="section-title">📞 National Emergency Numbers</div>
+<div class="national-grid">
+<a href="tel:112" class="national-card">
+<div class="national-icon">🚨</div>
+<div class="national-info"><h4>All Emergency</h4><div class="number">112</div><p>Police, Fire, Ambulance</p></div>
+</a>
+<a href="tel:108" class="national-card">
+<div class="national-icon">🚑</div>
+<div class="national-info"><h4>Ambulance</h4><div class="number">108</div><p>Free ambulance service</p></div>
+</a>
+<a href="tel:102" class="national-card">
+<div class="national-icon">🤰</div>
+<div class="national-info"><h4>Mother & Child</h4><div class="number">102</div><p>Pregnancy emergency</p></div>
+</a>
+<a href="tel:100" class="national-card">
+<div class="national-icon">👮</div>
+<div class="national-info"><h4>Police</h4><div class="number">100</div><p>Police helpline</p></div>
+</a>
+<a href="tel:101" class="national-card">
+<div class="national-icon">🔥</div>
+<div class="national-info"><h4>Fire Service</h4><div class="number">101</div><p>Fire emergency</p></div>
+</a>
+<a href="tel:1098" class="national-card">
+<div class="national-icon">👶</div>
+<div class="national-info"><h4>Child Helpline</h4><div class="number">1098</div><p>24x7 for children</p></div>
+</a>
+<a href="tel:181" class="national-card">
+<div class="national-icon">👩</div>
+<div class="national-info"><h4>Women Helpline</h4><div class="number">181</div><p>Women in distress</p></div>
+</a>
+<a href="tel:1075" class="national-card">
+<div class="national-icon">🏥</div>
+<div class="national-info"><h4>COVID Helpline</h4><div class="number">1075</div><p>National helpline</p></div>
+</a>
+</div>
+
+<!-- My Medical Info (Quick reference for paramedics) -->
+<div class="section-title">🏥 My Medical Info</div>
+<div class="share-info">
+<strong>📋 For Paramedics:</strong> Show this info to medical responders. Includes blood group, allergies, conditions from your profile.
+</div>
+<div class="medical-info-panel" id="medicalInfo">
+<div style="text-align:center;color:var(--text-muted);padding:10px">Loading your medical info...</div>
+</div>
+
+<!-- Personal Emergency Contacts -->
+<div class="section-title">👨‍👩‍👧 My Emergency Contacts</div>
+<button class="add-btn" onclick="openContactModal()">+ Add Emergency Contact</button>
+<div class="contacts-grid" id="contacts-list">
+<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:10px">📞</div><p>No emergency contacts added yet.</p></div>
+</div>
+
+</div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",authDomain:"helthchain.firebaseapp.com",projectId:"helthchain",storageBucket:"helthchain.appspot.com",messagingSenderId:"682542534348",appId:"1:682542534348:web:bedb3583d7d2eb49a57c69"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+let currentUser=null;
+let editingContactId=null;
+let countdownInterval=null;
+const toast=document.getElementById('toast');
+const toastMsg=document.getElementById('toast-msg');
+const toastIcon=document.getElementById('toast-icon');
+let toastTimeout=null;
+function showToast(m,t='info'){clearTimeout(toastTimeout);toastMsg.textContent=m;toastIcon.textContent=t==='error'?'⚠️':t==='success'?'✅':'ℹ️';toast.className=`toast ${t} show`;toastTimeout=setTimeout(()=>{toast.classList.remove('show')},4000)}
+function escapeHtml(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+
+const relationEmojis={Father:'👨',Mother:'👩',Spouse:'💑',Brother:'👨',Sister:'👩',Son:'👦',Daughter:'👧','Family Doctor':'🩺',Neighbor:'🏡',Friend:'👤',Other:'👤'};
+
+auth.onAuthStateChanged(async u=>{
+  if(!u){window.location.replace('login.html');return}
+  currentUser=u;
+  document.getElementById('global-loader').style.display='none';
+  await loadMedicalInfo();
+  loadContacts();
+});
+
+async function loadMedicalInfo(){
+  try{
+    const doc=await db.collection('users').doc(currentUser.uid).get();
+    const c=document.getElementById('medicalInfo');
+    if(!doc.exists){
+      c.innerHTML=`<div style="text-align:center;padding:14px"><p style="color:var(--text-muted);margin-bottom:10px">No medical info yet</p><a href="profile.html" class="btn btn-primary" style="text-decoration:none;display:inline-flex">→ Complete Profile</a></div>`;
+      return;
+    }
+    const d=doc.data();
+    let html='';
+    html+=`<div class="med-info-row"><span>Name:</span><span>${escapeHtml(d.fullName||currentUser.displayName||'-')}</span></div>`;
+    if(d.dob){const age=Math.floor((Date.now()-new Date(d.dob).getTime())/(365.25*24*60*60*1000));html+=`<div class="med-info-row"><span>Age:</span><span>${age} years</span></div>`}
+    if(d.gender)html+=`<div class="med-info-row"><span>Gender:</span><span>${escapeHtml(d.gender)}</span></div>`;
+    html+=`<div class="med-info-row"><span>Blood Group:</span><span style="color:var(--danger);font-size:1.1rem">${escapeHtml(d.bloodGroup||'NOT SET')}</span></div>`;
+    if(d.allergies)html+=`<div class="med-info-row"><span>Allergies:</span><span style="color:var(--warning)">${escapeHtml(d.allergies)}</span></div>`;
+    if(d.conditions&&d.conditions.length)html+=`<div class="med-info-row"><span>Conditions:</span><span>${escapeHtml(d.conditions.join(', '))}</span></div>`;
+    if(d.medications)html+=`<div class="med-info-row"><span>Medications:</span><span>${escapeHtml(d.medications)}</span></div>`;
+    if(d.mobile)html+=`<div class="med-info-row"><span>Mobile:</span><span>${escapeHtml(d.mobile)}</span></div>`;
+    if(d.emergencyName&&d.emergencyPhone)html+=`<div class="med-info-row"><span>Emergency:</span><span>${escapeHtml(d.emergencyName)} (${escapeHtml(d.emergencyPhone)})</span></div>`;
+    document.getElementById('medicalInfo').innerHTML=html;
+  }catch(e){console.error(e)}
+}
+
+function triggerSOS(){
+  document.getElementById('sosConfirmModal').classList.add('show');
+  let count=5;
+  document.getElementById('countdown').textContent=count;
+  countdownInterval=setInterval(()=>{
+    count--;
+    document.getElementById('countdown').textContent=count;
+    if(count<=0){clearInterval(countdownInterval);callEmergencyNow()}
+  },1000);
+}
+
+function callEmergencyNow(){
+  if(countdownInterval)clearInterval(countdownInterval);
+  document.getElementById('sosConfirmModal').classList.remove('show');
+  // Log SOS event
+  db.collection('sos_events').add({
+    patientId:currentUser.uid,
+    patientEmail:currentUser.email.toLowerCase(),
+    triggeredAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(()=>{});
+  // Try to share location
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      shareLocationToContacts(pos.coords.latitude,pos.coords.longitude);
+    },()=>{},{timeout:3000});
+  }
+  // Make the call
+  window.location.href='tel:112';
+}
+
+function cancelSOS(){
+  if(countdownInterval)clearInterval(countdownInterval);
+  document.getElementById('sosConfirmModal').classList.remove('show');
+  showToast('SOS cancelled','info');
+}
+
+async function shareLocationToContacts(lat,lng){
+  // Open SMS to primary contact with location
+  try{
+    const q=await db.collection('emergency_contacts').where('patientId','==',currentUser.uid).where('isPrimary','==',true).limit(1).get();
+    if(q.empty)return;
+    const c=q.docs[0].data();
+    const msg=`EMERGENCY: I need help. My location: https://maps.google.com/?q=${lat},${lng}`;
+    setTimeout(()=>{window.open(`sms:${c.phone}?body=${encodeURIComponent(msg)}`)},2000);
+  }catch(e){console.error(e)}
+}
+
+function openContactModal(){
+  editingContactId=null;
+  document.getElementById('contactTitle').textContent='📞 Add Emergency Contact';
+  document.getElementById('contactForm').reset();
+  document.getElementById('contactModal').classList.add('show');
+  setTimeout(()=>document.getElementById('contactName').focus(),100);
+}
+
+function closeContactModal(){document.getElementById('contactModal').classList.remove('show')}
+
+async function saveContact(){
+  const sb=document.getElementById('saveContactBtn');
+  const n=document.getElementById('contactName').value.trim();
+  const r=document.getElementById('contactRel').value;
+  const p=document.getElementById('contactPhone').value.trim();
+  const isPrimary=document.getElementById('contactPrimary').checked;
+  if(!n||!r||!p){showToast('Please fill required fields','error');return}
+  if(!/^[0-9]{10}$/.test(p)){showToast('Phone must be 10 digits','error');return}
+  const oh=sb.innerHTML;sb.disabled=true;sb.innerHTML='<span class="btn-spinner"></span> Saving...';
+  try{
+    // If marking as primary, unset others
+    if(isPrimary){
+      const others=await db.collection('emergency_contacts').where('patientId','==',currentUser.uid).where('isPrimary','==',true).get();
+      const batch=db.batch();
+      others.forEach(d=>{if(d.id!==editingContactId)batch.update(d.ref,{isPrimary:false})});
+      await batch.commit();
+    }
+    const data={
+      patientId:currentUser.uid,
+      patientEmail:currentUser.email.toLowerCase(),
+      name:n,
+      relation:r,
+      phone:p,
+      address:document.getElementById('contactAddress').value.trim()||null,
+      isPrimary:isPrimary,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if(editingContactId){await db.collection('emergency_contacts').doc(editingContactId).update(data);showToast('Updated','success')}
+    else{data.createdAt=firebase.firestore.FieldValue.serverTimestamp();await db.collection('emergency_contacts').add(data);showToast('Saved','success')}
+    closeContactModal();
+  }catch(e){showToast('Error: '+e.message,'error')}
+  finally{sb.disabled=false;sb.innerHTML=oh}
+}
+
+function loadContacts(){
+  db.collection('emergency_contacts').where('patientId','==',currentUser.uid).onSnapshot(q=>{
+    const c=document.getElementById('contacts-list');
+    if(q.empty){c.innerHTML=`<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:10px">📞</div><p>No emergency contacts added.</p><p style="margin-top:6px;font-size:0.82rem">Click '+ Add Emergency Contact' to add.</p></div>`;return}
+    const list=[];
+    q.forEach(d=>list.push({id:d.id,...d.data()}));
+    list.sort((a,b)=>(b.isPrimary?1:0)-(a.isPrimary?1:0));
+    let html='';
+    list.forEach(ct=>{
+      const emoji=relationEmojis[ct.relation]||'👤';
+      html+=`<div class="contact-card ${ct.isPrimary?'primary':''}"><div class="contact-avatar">${emoji}</div><div class="contact-info"><div class="contact-name">${escapeHtml(ct.name)}${ct.isPrimary?' ⭐':''}</div><div class="contact-rel">${escapeHtml(ct.relation)}</div><div class="contact-phone">${escapeHtml(ct.phone)}</div></div><div class="contact-actions"><a href="tel:${escapeHtml(ct.phone)}" class="icon-btn call" title="Call">📞</a><a href="sms:${escapeHtml(ct.phone)}" class="icon-btn" title="SMS">💬</a><button class="icon-btn" onclick="editContact('${escapeHtml(ct.id)}')" title="Edit">✏️</button><button class="icon-btn danger" onclick="deleteContact('${escapeHtml(ct.id)}','${escapeHtml(ct.name)}')" title="Delete">🗑️</button></div></div>`;
+    });
+    c.innerHTML=html;
+  },err=>{showToast('Could not load: '+err.message,'error')});
+}
+
+async function editContact(id){
+  try{
+    const doc=await db.collection('emergency_contacts').doc(id).get();
+    if(!doc.exists)return;
+    const d=doc.data();
+    editingContactId=id;
+    document.getElementById('contactTitle').textContent='✏️ Edit Contact';
+    document.getElementById('contactName').value=d.name||'';
+    document.getElementById('contactRel').value=d.relation||'';
+    document.getElementById('contactPhone').value=d.phone||'';
+    document.getElementById('contactAddress').value=d.address||'';
+    document.getElementById('contactPrimary').checked=!!d.isPrimary;
+    document.getElementById('contactModal').classList.add('show');
+  }catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+async function deleteContact(id,name){
+  if(!confirm(`Remove ${name} from emergency contacts?`))return;
+  try{await db.collection('emergency_contacts').doc(id).delete();showToast('Removed','success')}
+  catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeContactModal();cancelSOS()}});
+</script>
+</body>
+</html>

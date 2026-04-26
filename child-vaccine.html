@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Child Vaccination — HealthChain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060a12;--surface:#0d1520;--surface2:#141f30;--border:#1a2535;--accent:#00d4ff;--accent2:#7c3aed;--text:#e8f0ff;--text-muted:#6b7a99;--success:#10b981;--danger:#ef4444;--warning:#f59e0b}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+#global-loader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.spinner{border:4px solid rgba(0,212,255,0.1);border-top:4px solid var(--accent);border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite}
+.btn-spinner{border:2px solid rgba(255,255,255,0.3);border-top:2px solid white;border-radius:50%;width:14px;height:14px;animation:spin 0.8s linear infinite;display:inline-block}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 5%;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);text-decoration:none}
+.logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.back-btn{background:transparent;color:var(--text-muted);text-decoration:none;font-size:0.9rem;padding:8px 14px;border:1px solid var(--border);border-radius:8px}
+.container{max-width:1000px;margin:0 auto;padding:30px 20px;width:100%;flex:1}
+.header{margin-bottom:25px}
+.header h1{font-family:'Syne',sans-serif;font-size:2rem;margin-bottom:6px}
+.header h1 span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--text-muted);font-size:0.95rem}
+
+.info-banner{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2);border-radius:10px;padding:12px 14px;font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:20px}
+.info-banner strong{color:var(--accent)}
+
+.child-selector{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:25px}
+.child-selector h3{font-family:'Syne',sans-serif;font-size:1.05rem;margin-bottom:12px}
+.child-tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.child-tab{padding:10px 18px;background:var(--surface2);border:1px solid var(--border);border-radius:50px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text);font-family:inherit;display:flex;align-items:center;gap:8px}
+.child-tab:hover{border-color:var(--accent)}
+.child-tab.active{background:rgba(0,212,255,0.1);border-color:var(--accent);color:var(--accent)}
+.add-child-btn{padding:10px 18px;background:transparent;border:1px dashed var(--border);border-radius:50px;cursor:pointer;font-size:0.85rem;color:var(--text-muted);font-family:inherit}
+.add-child-btn:hover{color:var(--accent);border-color:var(--accent)}
+
+.summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:25px}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;align-items:center;gap:12px}
+.sum-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.icon-given{background:rgba(16,185,129,0.1);color:var(--success)}
+.icon-due{background:rgba(245,158,11,0.1);color:var(--warning)}
+.icon-overdue{background:rgba(239,68,68,0.1);color:var(--danger)}
+.icon-total{background:rgba(0,212,255,0.1);color:var(--accent)}
+.sum-info h3{font-size:1.5rem;margin-bottom:0}
+.sum-info p{color:var(--text-muted);font-size:0.78rem}
+
+.section-title{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:15px;display:flex;align-items:center;gap:8px}
+
+.schedule-list{display:grid;gap:12px;margin-bottom:30px}
+.vaccine-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.vaccine-card.given{background:rgba(16,185,129,0.03);border-color:rgba(16,185,129,0.3)}
+.vaccine-card.due{border-color:rgba(245,158,11,0.4)}
+.vaccine-card.overdue{border-color:rgba(239,68,68,0.4);background:rgba(239,68,68,0.03)}
+.vac-info{flex:1;min-width:0}
+.vac-name{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.vac-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:inline-flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;color:white}
+.vac-meta{font-size:0.82rem;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:12px;margin-top:5px}
+.vac-meta strong{color:var(--text)}
+.vac-meta span{display:flex;align-items:center;gap:4px}
+.vac-actions{display:flex;gap:6px;flex-shrink:0}
+.btn{padding:9px 16px;border-radius:8px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:0.82rem;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.success{background:linear-gradient(135deg,var(--success),#059669);border:none;color:white}
+.btn.success:hover{color:white}
+.btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+
+.status-badge{padding:4px 10px;border-radius:50px;font-size:0.7rem;font-weight:700;text-transform:uppercase}
+.status-given{background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.3)}
+.status-due{background:rgba(245,158,11,0.1);color:var(--warning);border:1px solid rgba(245,158,11,0.3)}
+.status-overdue{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.3)}
+.status-upcoming{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)}
+
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-muted);background:var(--surface);border-radius:14px;border:1px dashed var(--border)}
+.empty-state .emoji{font-size:3.5rem;margin-bottom:10px}
+
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:25px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-family:'Syne',sans-serif;margin-bottom:18px;font-size:1.25rem}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;margin-bottom:6px;color:var(--text-muted);font-size:0.85rem}
+.input-field{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:white;outline:none;font-family:inherit;font-size:0.9rem}
+.input-field:focus{border-color:var(--accent)}
+select.input-field{appearance:none;background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;cursor:pointer}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.btn-modal{padding:12px 22px;border-radius:50px;font-weight:600;cursor:pointer;border:none;font-size:0.92rem;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn-primary-modal{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;flex:1}
+.btn-outline-modal{background:transparent;border:1px solid var(--border);color:var(--text-muted)}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;z-index:10002;max-width:90%;min-width:280px;transition:transform 0.3s;font-size:0.9rem;display:flex;align-items:center;gap:10px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.toast.success{border-color:var(--success);color:var(--success)}
+.toast.info{border-color:var(--accent);color:var(--accent)}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}.vaccine-card{flex-direction:column;align-items:flex-start}.vac-actions{width:100%;justify-content:flex-end}}
+</style>
+</head>
+<body>
+<div id="global-loader"><div class="spinner"></div><p style="margin-top:20px;color:var(--text-muted)">Loading...</p></div>
+<div id="toast" class="toast"><span id="toast-icon">ℹ️</span><span id="toast-msg"></span></div>
+
+<!-- Add Child Modal -->
+<div id="childModal" class="modal-overlay" onclick="if(event.target===this)closeChildModal()">
+<div class="modal">
+<h3>👶 Add Child</h3>
+<form id="childForm" onsubmit="event.preventDefault();saveChild()">
+<div class="form-group">
+<label>Child's Name *</label>
+<input type="text" id="childName" class="input-field" placeholder="Full name" maxlength="100" required>
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>Date of Birth *</label>
+<input type="date" id="childDob" class="input-field" required>
+</div>
+<div class="form-group">
+<label>Gender</label>
+<select id="childGender" class="input-field">
+<option value="">Select</option>
+<option value="Male">👦 Male</option>
+<option value="Female">👧 Female</option>
+<option value="Other">⚧ Other</option>
+</select>
+</div>
+</div>
+<div class="form-group">
+<label>Blood Group</label>
+<select id="childBlood" class="input-field">
+<option value="">Select</option>
+<option value="A+">A+</option><option value="A-">A-</option>
+<option value="B+">B+</option><option value="B-">B-</option>
+<option value="AB+">AB+</option><option value="AB-">AB-</option>
+<option value="O+">O+</option><option value="O-">O-</option>
+<option value="Unknown">Unknown</option>
+</select>
+</div>
+<div class="modal-actions">
+<button type="submit" class="btn-modal btn-primary-modal" id="saveChildBtn">💾 Add Child</button>
+<button type="button" class="btn-modal btn-outline-modal" onclick="closeChildModal()">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- Mark Given Modal -->
+<div id="givenModal" class="modal-overlay" onclick="if(event.target===this)closeGivenModal()">
+<div class="modal">
+<h3 id="givenTitle">💉 Mark Vaccine Given</h3>
+<form id="givenForm" onsubmit="event.preventDefault();markGiven()">
+<input type="hidden" id="givenVacId">
+<div class="form-group">
+<label>Date Given *</label>
+<input type="date" id="givenDate" class="input-field" required>
+</div>
+<div class="form-group">
+<label>Vaccination Center</label>
+<input type="text" id="givenCenter" class="input-field" placeholder="Hospital/clinic" maxlength="150">
+</div>
+<div class="form-group">
+<label>Batch Number</label>
+<input type="text" id="givenBatch" class="input-field" placeholder="Optional" maxlength="50">
+</div>
+<div class="form-group">
+<label>Notes / Side Effects</label>
+<input type="text" id="givenNotes" class="input-field" placeholder="Any reactions" maxlength="200">
+</div>
+<div class="modal-actions">
+<button type="submit" class="btn-modal btn-primary-modal" id="markBtn">✓ Mark as Given</button>
+<button type="button" class="btn-modal btn-outline-modal" onclick="closeGivenModal()">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<nav>
+<a href="index.html" class="logo">Health<span>Chain</span></a>
+<a href="patient.html" class="back-btn">← Back</a>
+</nav>
+
+<div class="container">
+<div class="header">
+<h1>👶 <span>Child Vaccination Schedule</span></h1>
+<p>IAP-recommended vaccination schedule for children. Track every dose.</p>
+</div>
+
+<div class="info-banner">
+<strong>📋 IAP Schedule:</strong> Based on Indian Academy of Pediatrics (IAP) recommendations. Always consult your pediatrician for personalized schedule.
+</div>
+
+<div class="child-selector">
+<h3>👶 Select Child</h3>
+<div class="child-tabs" id="childTabs">
+<button class="add-child-btn" onclick="openChildModal()">+ Add Child</button>
+</div>
+</div>
+
+<div id="mainContent" style="display:none">
+<div class="summary-row">
+<div class="summary-card"><div class="sum-icon icon-given">✅</div><div class="sum-info"><h3 id="given-count">0</h3><p>Given</p></div></div>
+<div class="summary-card"><div class="sum-icon icon-due">⏰</div><div class="sum-info"><h3 id="due-count">0</h3><p>Due Soon</p></div></div>
+<div class="summary-card"><div class="sum-icon icon-overdue">🚨</div><div class="sum-info"><h3 id="overdue-count">0</h3><p>Overdue</p></div></div>
+<div class="summary-card"><div class="sum-icon icon-total">📋</div><div class="sum-info"><h3 id="total-count">0</h3><p>Total Vaccines</p></div></div>
+</div>
+
+<div class="section-title">🚨 Overdue / Due Now</div>
+<div class="schedule-list" id="overdue-list">
+<div class="empty-state"><div class="emoji">✅</div><p>All vaccines on track!</p></div>
+</div>
+
+<div class="section-title">⏰ Upcoming (Next 30 Days)</div>
+<div class="schedule-list" id="upcoming-list">
+<div class="empty-state"><div class="emoji">📭</div><p>No upcoming vaccines in 30 days.</p></div>
+</div>
+
+<div class="section-title">✅ Completed</div>
+<div class="schedule-list" id="given-list">
+<div class="empty-state"><div class="emoji">💉</div><p>No vaccines marked as given yet.</p></div>
+</div>
+
+<div class="section-title">📅 Future Schedule</div>
+<div class="schedule-list" id="future-list">
+<div class="empty-state"><div class="emoji">📋</div><p>No future vaccines.</p></div>
+</div>
+</div>
+
+<div id="noChildState" class="empty-state" style="margin-top:30px">
+<div class="emoji">👶</div>
+<h3>Add your first child</h3>
+<p style="margin-top:8px;font-size:0.85rem">Click "+ Add Child" above to start tracking vaccinations.</p>
+</div>
+
+</div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",authDomain:"helthchain.firebaseapp.com",projectId:"helthchain",storageBucket:"helthchain.appspot.com",messagingSenderId:"682542534348",appId:"1:682542534348:web:bedb3583d7d2eb49a57c69"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+
+// IAP Recommended Vaccination Schedule (months from birth)
+const IAP_SCHEDULE=[
+  {id:'bcg',name:'BCG',ageMonths:0,description:'Tuberculosis prevention',ageLabel:'At birth'},
+  {id:'opv0',name:'OPV-0',ageMonths:0,description:'Polio (oral)',ageLabel:'At birth'},
+  {id:'hepb',name:'Hepatitis B-1',ageMonths:0,description:'Hepatitis B prevention',ageLabel:'At birth'},
+  {id:'rota1',name:'Rotavirus-1',ageMonths:1.5,description:'Rotavirus diarrhea',ageLabel:'6 weeks'},
+  {id:'opv1',name:'OPV-1',ageMonths:1.5,description:'Polio',ageLabel:'6 weeks'},
+  {id:'hepb2',name:'Hepatitis B-2',ageMonths:1.5,description:'Hepatitis B 2nd dose',ageLabel:'6 weeks'},
+  {id:'dtwp1',name:'DTwP/DTaP-1',ageMonths:1.5,description:'Diphtheria, Tetanus, Pertussis',ageLabel:'6 weeks'},
+  {id:'hib1',name:'Hib-1',ageMonths:1.5,description:'Haemophilus influenzae type B',ageLabel:'6 weeks'},
+  {id:'pcv1',name:'PCV-1',ageMonths:1.5,description:'Pneumococcal vaccine',ageLabel:'6 weeks'},
+  {id:'ipv1',name:'IPV-1',ageMonths:1.5,description:'Inactivated Polio Vaccine',ageLabel:'6 weeks'},
+  {id:'rota2',name:'Rotavirus-2',ageMonths:2.5,description:'Rotavirus 2nd dose',ageLabel:'10 weeks'},
+  {id:'opv2',name:'OPV-2',ageMonths:2.5,description:'Polio 2nd dose',ageLabel:'10 weeks'},
+  {id:'dtwp2',name:'DTwP/DTaP-2',ageMonths:2.5,description:'DTwP 2nd dose',ageLabel:'10 weeks'},
+  {id:'hib2',name:'Hib-2',ageMonths:2.5,description:'Hib 2nd dose',ageLabel:'10 weeks'},
+  {id:'pcv2',name:'PCV-2',ageMonths:2.5,description:'PCV 2nd dose',ageLabel:'10 weeks'},
+  {id:'ipv2',name:'IPV-2',ageMonths:2.5,description:'IPV 2nd dose',ageLabel:'10 weeks'},
+  {id:'rota3',name:'Rotavirus-3',ageMonths:3.5,description:'Rotavirus 3rd dose',ageLabel:'14 weeks'},
+  {id:'opv3',name:'OPV-3',ageMonths:3.5,description:'Polio 3rd dose',ageLabel:'14 weeks'},
+  {id:'dtwp3',name:'DTwP/DTaP-3',ageMonths:3.5,description:'DTwP 3rd dose',ageLabel:'14 weeks'},
+  {id:'hib3',name:'Hib-3',ageMonths:3.5,description:'Hib 3rd dose',ageLabel:'14 weeks'},
+  {id:'pcv3',name:'PCV-3',ageMonths:3.5,description:'PCV 3rd dose',ageLabel:'14 weeks'},
+  {id:'ipv3',name:'IPV-3',ageMonths:3.5,description:'IPV 3rd dose',ageLabel:'14 weeks'},
+  {id:'hepb3',name:'Hepatitis B-3',ageMonths:6,description:'Hepatitis B 3rd dose',ageLabel:'6 months'},
+  {id:'flu1',name:'Influenza-1',ageMonths:6,description:'First flu vaccine',ageLabel:'6 months'},
+  {id:'flu2',name:'Influenza-2',ageMonths:7,description:'Flu booster (4 weeks after 1st)',ageLabel:'7 months'},
+  {id:'mmr1',name:'MMR-1',ageMonths:9,description:'Measles, Mumps, Rubella',ageLabel:'9 months'},
+  {id:'typhoid1',name:'Typhoid Conjugate',ageMonths:9,description:'Typhoid prevention',ageLabel:'9 months'},
+  {id:'mmr2',name:'MMR-2',ageMonths:15,description:'MMR booster',ageLabel:'15 months'},
+  {id:'varicella1',name:'Varicella-1',ageMonths:15,description:'Chickenpox prevention',ageLabel:'15 months'},
+  {id:'pcvbooster',name:'PCV Booster',ageMonths:15,description:'PCV booster dose',ageLabel:'15 months'},
+  {id:'hepa1',name:'Hepatitis A-1',ageMonths:12,description:'Hepatitis A prevention',ageLabel:'12 months'},
+  {id:'hepa2',name:'Hepatitis A-2',ageMonths:18,description:'Hepatitis A 2nd dose',ageLabel:'18 months'},
+  {id:'dtwpb1',name:'DTwP Booster-1',ageMonths:18,description:'DTwP first booster',ageLabel:'18 months'},
+  {id:'opvb',name:'OPV Booster',ageMonths:18,description:'Polio booster',ageLabel:'18 months'},
+  {id:'hibb',name:'Hib Booster',ageMonths:18,description:'Hib booster',ageLabel:'18 months'},
+  {id:'varicella2',name:'Varicella-2',ageMonths:60,description:'Chickenpox booster',ageLabel:'5 years'},
+  {id:'mmr3',name:'MMR-3',ageMonths:60,description:'MMR 3rd dose',ageLabel:'5 years'},
+  {id:'dtwpb2',name:'DTwP Booster-2',ageMonths:60,description:'DTwP second booster',ageLabel:'5 years'},
+  {id:'tdap',name:'Tdap',ageMonths:120,description:'Adult Tetanus, Diphtheria, Pertussis',ageLabel:'10 years'},
+  {id:'hpv1',name:'HPV-1',ageMonths:108,description:'HPV vaccine (girls 9-14yr)',ageLabel:'9-14 years'},
+  {id:'hpv2',name:'HPV-2',ageMonths:114,description:'HPV 2nd dose (6 months later)',ageLabel:'9-14 years'}
+];
+
+let currentUser=null;
+let allChildren=[];
+let activeChildId=null;
+let allGivenVaccines=[];
+
+const toast=document.getElementById('toast');
+const toastMsg=document.getElementById('toast-msg');
+const toastIcon=document.getElementById('toast-icon');
+let toastTimeout=null;
+function showToast(m,t='info'){clearTimeout(toastTimeout);toastMsg.textContent=m;toastIcon.textContent=t==='error'?'⚠️':t==='success'?'✅':'ℹ️';toast.className=`toast ${t} show`;toastTimeout=setTimeout(()=>{toast.classList.remove('show')},4000)}
+function escapeHtml(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+
+auth.onAuthStateChanged(async u=>{
+  if(!u){window.location.replace('login.html');return}
+  currentUser=u;
+  document.getElementById('global-loader').style.display='none';
+  loadChildren();
+});
+
+function openChildModal(){document.getElementById('childModal').classList.add('show');setTimeout(()=>document.getElementById('childName').focus(),100)}
+function closeChildModal(){document.getElementById('childModal').classList.remove('show');document.getElementById('childForm').reset()}
+
+async function saveChild(){
+  const sb=document.getElementById('saveChildBtn');
+  const n=document.getElementById('childName').value.trim();
+  const d=document.getElementById('childDob').value;
+  if(!n||!d){showToast('Name and DOB required','error');return}
+  const oh=sb.innerHTML;sb.disabled=true;sb.innerHTML='<span class="btn-spinner"></span> Adding...';
+  try{
+    const ref=await db.collection('children').add({
+      patientId:currentUser.uid,
+      patientEmail:currentUser.email.toLowerCase(),
+      name:n,
+      dob:d,
+      gender:document.getElementById('childGender').value||null,
+      bloodGroup:document.getElementById('childBlood').value||null,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast(`${n} added! 🎉`,'success');
+    closeChildModal();
+    activeChildId=ref.id;
+  }catch(e){showToast('Error: '+e.message,'error')}
+  finally{sb.disabled=false;sb.innerHTML=oh}
+}
+
+function loadChildren(){
+  db.collection('children').where('patientId','==',currentUser.uid).onSnapshot(q=>{
+    allChildren=[];
+    q.forEach(d=>allChildren.push({id:d.id,...d.data()}));
+    allChildren.sort((a,b)=>(a.createdAt?.toDate()||0)-(b.createdAt?.toDate()||0));
+    renderChildTabs();
+    if(allChildren.length>0){
+      if(!activeChildId||!allChildren.find(c=>c.id===activeChildId))activeChildId=allChildren[0].id;
+      document.getElementById('mainContent').style.display='block';
+      document.getElementById('noChildState').style.display='none';
+      loadGivenVaccines();
+    }else{
+      document.getElementById('mainContent').style.display='none';
+      document.getElementById('noChildState').style.display='block';
+    }
+  },err=>{showToast('Could not load: '+err.message,'error')});
+}
+
+function renderChildTabs(){
+  const c=document.getElementById('childTabs');
+  let html='';
+  allChildren.forEach(child=>{
+    const age=getAge(child.dob);
+    const cls=child.id===activeChildId?'active':'';
+    const emoji=child.gender==='Female'?'👧':child.gender==='Male'?'👦':'👶';
+    html+=`<button class="child-tab ${cls}" onclick="selectChild('${escapeHtml(child.id)}')">${emoji} ${escapeHtml(child.name)} <span style="opacity:0.7;font-size:0.78rem">(${age})</span></button>`;
+  });
+  html+=`<button class="add-child-btn" onclick="openChildModal()">+ Add Child</button>`;
+  c.innerHTML=html;
+}
+
+function selectChild(id){
+  activeChildId=id;
+  renderChildTabs();
+  loadGivenVaccines();
+}
+
+function getAge(dob){
+  if(!dob)return'';
+  const months=Math.floor((Date.now()-new Date(dob).getTime())/(30.44*24*60*60*1000));
+  if(months<12)return `${months}mo`;
+  if(months<24)return `${Math.floor(months/12)}y ${months%12}m`;
+  return `${Math.floor(months/12)}y`;
+}
+
+function loadGivenVaccines(){
+  if(!activeChildId)return;
+  db.collection('child_vaccines').where('childId','==',activeChildId).onSnapshot(q=>{
+    allGivenVaccines=[];
+    q.forEach(d=>allGivenVaccines.push({id:d.id,...d.data()}));
+    renderSchedule();
+  },err=>{showToast('Could not load: '+err.message,'error')});
+}
+
+function renderSchedule(){
+  const child=allChildren.find(c=>c.id===activeChildId);
+  if(!child)return;
+  
+  const dob=new Date(child.dob);
+  const today=new Date();today.setHours(0,0,0,0);
+  const ageMonths=(today-dob)/(30.44*24*60*60*1000);
+  
+  const overdue=[],upcoming=[],given=[],future=[];
+  
+  IAP_SCHEDULE.forEach(v=>{
+    const givenRecord=allGivenVaccines.find(g=>g.vaccineId===v.id);
+    const dueDate=new Date(dob);
+    dueDate.setDate(dueDate.getDate()+v.ageMonths*30.44);
+    const daysUntilDue=Math.floor((dueDate-today)/(1000*60*60*24));
+    
+    const enriched={...v,givenRecord,dueDate,daysUntilDue};
+    
+    if(givenRecord)given.push(enriched);
+    else if(daysUntilDue<-7)overdue.push(enriched);
+    else if(daysUntilDue>=-7&&daysUntilDue<=30)upcoming.push(enriched);
+    else if(daysUntilDue>30)future.push(enriched);
+  });
+  
+  // Sort
+  overdue.sort((a,b)=>a.daysUntilDue-b.daysUntilDue);
+  upcoming.sort((a,b)=>a.daysUntilDue-b.daysUntilDue);
+  given.sort((a,b)=>new Date(b.givenRecord.dateGiven)-new Date(a.givenRecord.dateGiven));
+  future.sort((a,b)=>a.daysUntilDue-b.daysUntilDue);
+  
+  // Update counts
+  document.getElementById('given-count').textContent=given.length;
+  document.getElementById('due-count').textContent=upcoming.length;
+  document.getElementById('overdue-count').textContent=overdue.length;
+  document.getElementById('total-count').textContent=IAP_SCHEDULE.length;
+  
+  // Render lists
+  renderList('overdue-list',overdue,'overdue');
+  renderList('upcoming-list',upcoming,'upcoming');
+  renderList('given-list',given,'given');
+  renderList('future-list',future.slice(0,15),'future');
+}
+
+function renderList(id,list,kind){
+  const c=document.getElementById(id);
+  if(list.length===0){
+    const msgs={overdue:'All vaccines on track!',upcoming:'No upcoming vaccines in 30 days.',given:'No vaccines marked as given yet.',future:'No future vaccines.'};
+    const emojis={overdue:'✅',upcoming:'📭',given:'💉',future:'📋'};
+    c.innerHTML=`<div class="empty-state"><div class="emoji">${emojis[kind]}</div><p>${msgs[kind]}</p></div>`;
+    return;
+  }
+  let html='';
+  list.forEach(v=>{
+    let cardCls='',badge='',timeStr='';
+    if(kind==='given'){
+      cardCls='given';
+      badge='<span class="status-badge status-given">✓ GIVEN</span>';
+      const givenDate=new Date(v.givenRecord.dateGiven);
+      timeStr=`Given ${givenDate.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}`;
+    }else if(kind==='overdue'){
+      cardCls='overdue';
+      badge='<span class="status-badge status-overdue">🚨 OVERDUE</span>';
+      timeStr=`<span style="color:var(--danger)"><strong>${Math.abs(v.daysUntilDue)} days overdue</strong></span>`;
+    }else if(kind==='upcoming'){
+      cardCls='due';
+      badge='<span class="status-badge status-due">⏰ DUE SOON</span>';
+      if(v.daysUntilDue<0)timeStr=`<span style="color:var(--warning)"><strong>${Math.abs(v.daysUntilDue)} days overdue</strong></span>`;
+      else if(v.daysUntilDue===0)timeStr=`<span style="color:var(--warning)"><strong>Due today</strong></span>`;
+      else timeStr=`<strong>Due in ${v.daysUntilDue} days</strong>`;
+    }else{
+      badge='<span class="status-badge status-upcoming">📅 FUTURE</span>';
+      timeStr=`In ${Math.floor(v.daysUntilDue/30)} months`;
+    }
+    
+    let actions='';
+    if(kind!=='given'){
+      actions=`<button class="btn success" onclick="openGivenModal('${escapeHtml(v.id)}','${escapeHtml(v.name)}')">✓ Mark Given</button>`;
+    }else{
+      actions=`<button class="btn danger" onclick="undoGiven('${escapeHtml(v.givenRecord.id)}','${escapeHtml(v.name)}')">↶ Undo</button>`;
+    }
+    
+    html+=`<div class="vaccine-card ${cardCls}"><div class="vac-info"><div class="vac-name"><span class="vac-icon">💉</span>${escapeHtml(v.name)}${badge}</div><div class="vac-meta"><span>📅 <strong>${escapeHtml(v.ageLabel)}</strong></span><span>📝 ${escapeHtml(v.description)}</span><span>${timeStr}</span></div>${v.givenRecord&&v.givenRecord.center?`<div class="vac-meta" style="margin-top:4px"><span>🏥 ${escapeHtml(v.givenRecord.center)}</span></div>`:''}</div><div class="vac-actions">${actions}</div></div>`;
+  });
+  c.innerHTML=html;
+}
+
+function openGivenModal(vacId,vacName){
+  document.getElementById('givenVacId').value=vacId;
+  document.getElementById('givenTitle').textContent=`✓ Mark ${vacName} Given`;
+  document.getElementById('givenForm').reset();
+  document.getElementById('givenDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('givenModal').classList.add('show');
+}
+function closeGivenModal(){document.getElementById('givenModal').classList.remove('show')}
+
+async function markGiven(){
+  const sb=document.getElementById('markBtn');
+  const vacId=document.getElementById('givenVacId').value;
+  const date=document.getElementById('givenDate').value;
+  if(!vacId||!date){showToast('Date required','error');return}
+  const v=IAP_SCHEDULE.find(x=>x.id===vacId);
+  if(!v)return;
+  const oh=sb.innerHTML;sb.disabled=true;sb.innerHTML='<span class="btn-spinner"></span> Saving...';
+  try{
+    await db.collection('child_vaccines').add({
+      patientId:currentUser.uid,
+      childId:activeChildId,
+      vaccineId:vacId,
+      vaccineName:v.name,
+      dateGiven:date,
+      center:document.getElementById('givenCenter').value.trim()||null,
+      batch:document.getElementById('givenBatch').value.trim()||null,
+      notes:document.getElementById('givenNotes').value.trim()||null,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast(`${v.name} marked as given! 🎉`,'success');
+    closeGivenModal();
+  }catch(e){showToast('Error: '+e.message,'error')}
+  finally{sb.disabled=false;sb.innerHTML=oh}
+}
+
+async function undoGiven(id,name){
+  if(!confirm(`Mark ${name} as not given?`))return;
+  try{await db.collection('child_vaccines').doc(id).delete();showToast('Undone','success')}
+  catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeChildModal();closeGivenModal()}});
+</script>
+</body>
+</html>

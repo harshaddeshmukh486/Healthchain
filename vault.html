@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Health Vault — HealthChain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060a12;--surface:#0d1520;--surface2:#141f30;--border:#1a2535;--accent:#00d4ff;--accent2:#7c3aed;--text:#e8f0ff;--text-muted:#6b7a99;--success:#10b981;--danger:#ef4444;--warning:#f59e0b}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+#global-loader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.spinner{border:4px solid rgba(0,212,255,0.1);border-top:4px solid var(--accent);border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite}
+.btn-spinner{border:2px solid rgba(255,255,255,0.3);border-top:2px solid white;border-radius:50%;width:14px;height:14px;animation:spin 0.8s linear infinite;display:inline-block}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 5%;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);text-decoration:none}
+.logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.back-btn{background:transparent;color:var(--text-muted);text-decoration:none;font-size:0.9rem;padding:8px 14px;border:1px solid var(--border);border-radius:8px}
+.container{max-width:1100px;margin:0 auto;padding:30px 20px;width:100%;flex:1}
+.header{margin-bottom:25px}
+.header h1{font-family:'Syne',sans-serif;font-size:2rem;margin-bottom:6px}
+.header h1 span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--text-muted);font-size:0.95rem}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:25px;overflow-x:auto}
+.tab{padding:14px 22px;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;font-weight:600;font-size:0.9rem;white-space:nowrap;transition:0.2s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.section{display:none}
+.section.active{display:block}
+.add-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;padding:13px 26px;border-radius:50px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;display:inline-flex;align-items:center;gap:8px;margin-bottom:25px}
+.add-btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,212,255,0.3)}
+.items-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.vault-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;transition:0.2s;position:relative;overflow:hidden}
+.vault-card:hover{border-color:var(--accent);transform:translateY(-3px)}
+.vault-card.expired{border-color:rgba(239,68,68,0.3)}
+.vault-card.expiring{border-color:rgba(245,158,11,0.3)}
+.card-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.card-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+.icon-insurance{background:rgba(59,130,246,0.1);color:#3B82F6}
+.icon-vaccine{background:rgba(16,185,129,0.1);color:var(--success)}
+.icon-other{background:rgba(124,58,237,0.1);color:#a78bfa}
+.card-title{flex:1;min-width:0}
+.card-title h3{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:2px}
+.card-title p{color:var(--text-muted);font-size:0.78rem}
+.card-body{margin-bottom:14px}
+.card-row{display:flex;justify-content:space-between;padding:5px 0;font-size:0.83rem;border-bottom:1px solid rgba(26,37,53,0.5)}
+.card-row:last-child{border-bottom:none}
+.card-row span:first-child{color:var(--text-muted)}
+.card-row span:last-child{color:var(--text);font-weight:500;text-align:right;word-break:break-all}
+.card-actions{display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap}
+.action-btn{padding:8px 14px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.action-btn:hover{border-color:var(--accent);color:var(--accent)}
+.action-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.expiry-badge{position:absolute;top:14px;right:14px;padding:4px 10px;border-radius:50px;font-size:0.68rem;font-weight:700;text-transform:uppercase}
+.badge-active{background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.3)}
+.badge-expiring{background:rgba(245,158,11,0.1);color:var(--warning);border:1px solid rgba(245,158,11,0.3)}
+.badge-expired{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.3)}
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-muted);background:var(--surface);border-radius:14px;border:1px dashed var(--border);grid-column:1/-1}
+.empty-state .emoji{font-size:3.5rem;margin-bottom:10px}
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:25px;max-width:550px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-family:'Syne',sans-serif;margin-bottom:18px;font-size:1.25rem}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;margin-bottom:6px;color:var(--text-muted);font-size:0.85rem}
+.form-group label .required{color:var(--danger)}
+.input-field{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:white;outline:none;font-family:inherit;font-size:0.9rem}
+.input-field:focus{border-color:var(--accent)}
+select.input-field{appearance:none;background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;cursor:pointer}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.file-upload-label{display:flex;align-items:center;justify-content:center;gap:10px;padding:18px;background:var(--surface2);border:2px dashed var(--border);border-radius:10px;cursor:pointer;color:var(--text-muted);font-size:0.88rem;position:relative}
+.file-upload-label:hover{border-color:var(--accent);color:var(--accent)}
+input[type="file"]{position:absolute;opacity:0;pointer-events:none}
+.file-selected{color:var(--success)!important;border-color:var(--success)!important}
+.upload-progress{width:100%;height:4px;background:var(--surface2);border-radius:2px;margin-top:8px;overflow:hidden;display:none}
+.upload-progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width 0.3s}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.btn{padding:12px 22px;border-radius:50px;font-weight:600;cursor:pointer;border:none;font-size:0.92rem;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;flex:1}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-muted)}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;z-index:10002;max-width:90%;min-width:280px;transition:transform 0.3s;font-size:0.9rem;display:flex;align-items:center;gap:10px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.toast.success{border-color:var(--success);color:var(--success)}
+.toast.info{border-color:var(--accent);color:var(--accent)}
+.info-banner{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2);border-radius:10px;padding:12px 14px;font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:20px}
+.info-banner strong{color:var(--accent)}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:25px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;align-items:center;gap:12px}
+.stat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.stat-info h3{font-size:1.5rem;margin-bottom:0}
+.stat-info p{color:var(--text-muted);font-size:0.78rem}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="global-loader"><div class="spinner"></div><p style="margin-top:20px;color:var(--text-muted)">Loading...</p></div>
+<div id="toast" class="toast"><span id="toast-icon">ℹ️</span><span id="toast-msg"></span></div>
+
+<!-- Insurance Modal -->
+<div id="insuranceModal" class="modal-overlay" onclick="if(event.target===this)closeModal('insurance')">
+<div class="modal">
+<h3 id="insTitle">🛡️ Add Insurance Policy</h3>
+<form id="insForm" onsubmit="event.preventDefault();saveInsurance()">
+<input type="hidden" id="insId">
+<div class="form-group">
+<label>Policy Type *</label>
+<select id="insType" class="input-field" required>
+<option value="">Select type</option>
+<option value="Individual Health">Individual Health Insurance</option>
+<option value="Family Floater">Family Floater</option>
+<option value="Senior Citizen">Senior Citizen</option>
+<option value="Critical Illness">Critical Illness</option>
+<option value="Accident">Accident Insurance</option>
+<option value="Group Health">Group/Corporate Health</option>
+<option value="Government">Government Scheme (Ayushman Bharat etc)</option>
+<option value="Other">Other</option>
+</select>
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>Insurance Provider *</label>
+<input type="text" id="insProvider" class="input-field" placeholder="e.g. Star Health, HDFC Ergo" maxlength="100" required>
+</div>
+<div class="form-group">
+<label>Policy Number *</label>
+<input type="text" id="insNumber" class="input-field" placeholder="Policy number" maxlength="50" required>
+</div>
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>Sum Insured (₹)</label>
+<input type="number" id="insSum" class="input-field" placeholder="e.g. 500000" min="0">
+</div>
+<div class="form-group">
+<label>Annual Premium (₹)</label>
+<input type="number" id="insPremium" class="input-field" placeholder="e.g. 12000" min="0">
+</div>
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>Start Date *</label>
+<input type="date" id="insStart" class="input-field" required>
+</div>
+<div class="form-group">
+<label>Expiry Date *</label>
+<input type="date" id="insExpiry" class="input-field" required>
+</div>
+</div>
+<div class="form-group">
+<label>Helpline Number</label>
+<input type="tel" id="insPhone" class="input-field" placeholder="Insurance company helpline" maxlength="15">
+</div>
+<div class="form-group">
+<label>Members Covered</label>
+<input type="text" id="insMembers" class="input-field" placeholder="e.g. Self, Spouse, 2 children" maxlength="200">
+</div>
+<div class="form-group">
+<label>Upload Policy Document (PDF/Image)</label>
+<label class="file-upload-label" id="insFileLabel"><span id="insFileText">📎 Click to attach file (optional)</span><input type="file" id="insFile" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFile(event,'ins')"></label>
+<div class="upload-progress" id="insProgress"><div class="upload-progress-bar" id="insProgressBar"></div></div>
+</div>
+<div class="form-group">
+<label>Notes</label>
+<input type="text" id="insNotes" class="input-field" placeholder="Coverage details, restrictions" maxlength="300">
+</div>
+<div class="modal-actions">
+<button type="submit" class="btn btn-primary" id="insSaveBtn">💾 Save Policy</button>
+<button type="button" class="btn btn-outline" onclick="closeModal('insurance')">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- Vaccination Modal -->
+<div id="vaccineModal" class="modal-overlay" onclick="if(event.target===this)closeModal('vaccine')">
+<div class="modal">
+<h3 id="vacTitle">💉 Add Vaccination</h3>
+<form id="vacForm" onsubmit="event.preventDefault();saveVaccine()">
+<input type="hidden" id="vacId">
+<div class="form-group">
+<label>Vaccine Name *</label>
+<select id="vacName" class="input-field" required onchange="checkOtherVac()">
+<option value="">Select vaccine</option>
+<optgroup label="Childhood Vaccines">
+<option value="BCG">BCG</option>
+<option value="Hepatitis B">Hepatitis B</option>
+<option value="OPV">OPV (Polio)</option>
+<option value="DPT">DPT</option>
+<option value="MMR">MMR (Measles, Mumps, Rubella)</option>
+<option value="Chickenpox">Chickenpox (Varicella)</option>
+<option value="Typhoid">Typhoid</option>
+<option value="Rotavirus">Rotavirus</option>
+<option value="Pneumococcal">Pneumococcal</option>
+<option value="Hib">Hib</option>
+</optgroup>
+<optgroup label="Adult Vaccines">
+<option value="COVID-19">COVID-19</option>
+<option value="Influenza">Influenza (Flu)</option>
+<option value="Tetanus">Tetanus</option>
+<option value="Hepatitis A">Hepatitis A</option>
+<option value="HPV">HPV</option>
+<option value="Pneumonia">Pneumonia</option>
+<option value="Shingles">Shingles</option>
+<option value="Meningococcal">Meningococcal</option>
+</optgroup>
+<optgroup label="Travel Vaccines">
+<option value="Yellow Fever">Yellow Fever</option>
+<option value="Japanese Encephalitis">Japanese Encephalitis</option>
+<option value="Rabies">Rabies</option>
+<option value="Cholera">Cholera</option>
+</optgroup>
+<option value="Other">Other (specify)</option>
+</select>
+</div>
+<div class="form-group" id="otherVacGroup" style="display:none">
+<label>Specify Vaccine Name</label>
+<input type="text" id="vacOther" class="input-field" placeholder="Vaccine name" maxlength="100">
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>Dose Number</label>
+<select id="vacDose" class="input-field">
+<option value="">Select</option>
+<option value="1st Dose">1st Dose</option>
+<option value="2nd Dose">2nd Dose</option>
+<option value="3rd Dose">3rd Dose</option>
+<option value="Booster">Booster</option>
+<option value="Annual">Annual</option>
+</select>
+</div>
+<div class="form-group">
+<label>Date Taken *</label>
+<input type="date" id="vacDate" class="input-field" required>
+</div>
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>Vaccination Center</label>
+<input type="text" id="vacCenter" class="input-field" placeholder="Hospital/clinic name" maxlength="150">
+</div>
+<div class="form-group">
+<label>Batch Number</label>
+<input type="text" id="vacBatch" class="input-field" placeholder="Optional" maxlength="50">
+</div>
+</div>
+<div class="form-group">
+<label>Next Due Date</label>
+<input type="date" id="vacNext" class="input-field">
+</div>
+<div class="form-group">
+<label>Upload Certificate (PDF/Image)</label>
+<label class="file-upload-label" id="vacFileLabel"><span id="vacFileText">📎 Click to attach file (optional)</span><input type="file" id="vacFile" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFile(event,'vac')"></label>
+<div class="upload-progress" id="vacProgress"><div class="upload-progress-bar" id="vacProgressBar"></div></div>
+</div>
+<div class="form-group">
+<label>Notes</label>
+<input type="text" id="vacNotes" class="input-field" placeholder="Side effects, doctor name" maxlength="300">
+</div>
+<div class="modal-actions">
+<button type="submit" class="btn btn-primary" id="vacSaveBtn">💾 Save Vaccination</button>
+<button type="button" class="btn btn-outline" onclick="closeModal('vaccine')">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<nav>
+<a href="index.html" class="logo">Health<span>Chain</span></a>
+<a href="patient.html" class="back-btn">← Back</a>
+</nav>
+
+<div class="container">
+<div class="header">
+<h1>🔐 <span>Health Vault</span></h1>
+<p>Secure storage for insurance policies and vaccination records.</p>
+</div>
+
+<div class="info-banner">
+<strong>🛡️ Encrypted Storage:</strong> All documents are stored on Cloudinary CDN with secure access. Only you can view your vault items.
+</div>
+
+<div class="stats-row">
+<div class="stat-card"><div class="stat-icon icon-insurance">🛡️</div><div class="stat-info"><h3 id="ins-count">0</h3><p>Insurance Policies</p></div></div>
+<div class="stat-card"><div class="stat-icon icon-vaccine">💉</div><div class="stat-info"><h3 id="vac-count">0</h3><p>Vaccinations</p></div></div>
+<div class="stat-card"><div class="stat-icon icon-other" style="background:rgba(245,158,11,0.1);color:var(--warning)">⚠️</div><div class="stat-info"><h3 id="exp-count">0</h3><p>Expiring Soon</p></div></div>
+</div>
+
+<div class="tabs">
+<div class="tab active" onclick="switchTab('insurance',this)">🛡️ Insurance</div>
+<div class="tab" onclick="switchTab('vaccine',this)">💉 Vaccinations</div>
+</div>
+
+<div class="section active" id="insurance-section">
+<button class="add-btn" onclick="openModal('insurance')">+ Add Insurance Policy</button>
+<div class="items-grid" id="insurance-list"><div class="empty-state"><div class="emoji">🛡️</div><h3>No insurance policies</h3><p style="margin-top:8px;font-size:0.85rem">Add your health insurance policies for quick access.</p></div></div>
+</div>
+
+<div class="section" id="vaccine-section">
+<button class="add-btn" onclick="openModal('vaccine')">+ Add Vaccination</button>
+<div class="items-grid" id="vaccine-list"><div class="empty-state"><div class="emoji">💉</div><h3>No vaccinations recorded</h3><p style="margin-top:8px;font-size:0.85rem">Track your vaccination history.</p></div></div>
+</div>
+</div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",authDomain:"helthchain.firebaseapp.com",projectId:"helthchain",storageBucket:"helthchain.appspot.com",messagingSenderId:"682542534348",appId:"1:682542534348:web:bedb3583d7d2eb49a57c69"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+const CLOUDINARY_CLOUD_NAME='dwxqo28l9';
+const CLOUDINARY_UPLOAD_PRESET='healthchain_unsigned';
+let currentUser=null;
+let selectedInsFile=null;
+let selectedVacFile=null;
+let editingInsId=null;
+let editingVacId=null;
+const toast=document.getElementById('toast');
+const toastMsg=document.getElementById('toast-msg');
+const toastIcon=document.getElementById('toast-icon');
+let toastTimeout=null;
+function showToast(m,t='info'){clearTimeout(toastTimeout);toastMsg.textContent=m;toastIcon.textContent=t==='error'?'⚠️':t==='success'?'✅':'ℹ️';toast.className=`toast ${t} show`;toastTimeout=setTimeout(()=>{toast.classList.remove('show')},4000)}
+function escapeHtml(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+
+async function uploadToCloudinary(f,o){return new Promise((res,rej)=>{const fd=new FormData();fd.append('file',f);fd.append('upload_preset',CLOUDINARY_UPLOAD_PRESET);const x=new XMLHttpRequest();x.open('POST',`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`);x.upload.addEventListener('progress',e=>{if(e.lengthComputable&&o)o((e.loaded/e.total)*100)});x.onload=()=>{if(x.status===200){const d=JSON.parse(x.responseText);res({url:d.secure_url,publicId:d.public_id})}else rej(new Error('Upload failed'))};x.onerror=()=>rej(new Error('Network error'));x.send(fd)})}
+
+auth.onAuthStateChanged(async u=>{
+  if(!u){window.location.replace('login.html');return}
+  currentUser=u;
+  document.getElementById('global-loader').style.display='none';
+  loadInsurance();
+  loadVaccines();
+});
+
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(name+'-section').classList.add('active');
+}
+
+function openModal(type){
+  if(type==='insurance'){
+    editingInsId=null;
+    document.getElementById('insTitle').textContent='🛡️ Add Insurance Policy';
+    document.getElementById('insForm').reset();
+    selectedInsFile=null;
+    document.getElementById('insFileText').textContent='📎 Click to attach file (optional)';
+    document.getElementById('insFileLabel').classList.remove('file-selected');
+    document.getElementById('insuranceModal').classList.add('show');
+  }else{
+    editingVacId=null;
+    document.getElementById('vacTitle').textContent='💉 Add Vaccination';
+    document.getElementById('vacForm').reset();
+    selectedVacFile=null;
+    document.getElementById('vacFileText').textContent='📎 Click to attach file (optional)';
+    document.getElementById('vacFileLabel').classList.remove('file-selected');
+    document.getElementById('otherVacGroup').style.display='none';
+    document.getElementById('vaccineModal').classList.add('show');
+  }
+}
+
+function closeModal(type){
+  if(type==='insurance')document.getElementById('insuranceModal').classList.remove('show');
+  else document.getElementById('vaccineModal').classList.remove('show');
+}
+
+function checkOtherVac(){
+  const v=document.getElementById('vacName').value;
+  document.getElementById('otherVacGroup').style.display=v==='Other'?'block':'none';
+}
+
+function handleFile(e,type){
+  const f=e.target.files[0];
+  const lt=document.getElementById(type+'FileText');
+  const ll=document.getElementById(type+'FileLabel');
+  if(!f){if(type==='ins')selectedInsFile=null;else selectedVacFile=null;lt.textContent='📎 Click to attach file (optional)';ll.classList.remove('file-selected');return}
+  if(f.size>5*1024*1024){showToast('File too large. Max 5MB.','error');e.target.value='';return}
+  if(type==='ins')selectedInsFile=f;else selectedVacFile=f;
+  lt.textContent=`✅ ${f.name} (${(f.size/1024).toFixed(1)} KB)`;
+  ll.classList.add('file-selected');
+}
+
+async function saveInsurance(){
+  const sb=document.getElementById('insSaveBtn');
+  const t=document.getElementById('insType').value;
+  const p=document.getElementById('insProvider').value.trim();
+  const n=document.getElementById('insNumber').value.trim();
+  const s=document.getElementById('insStart').value;
+  const e=document.getElementById('insExpiry').value;
+  if(!t||!p||!n||!s||!e){showToast('Please fill required fields','error');return}
+  const oh=sb.innerHTML;sb.disabled=true;sb.innerHTML='<span class="btn-spinner"></span> Saving...';
+  try{
+    let fu=null,fp=null,fn=null;
+    if(selectedInsFile){
+      sb.innerHTML='<span class="btn-spinner"></span> Uploading...';
+      document.getElementById('insProgress').style.display='block';
+      const r=await uploadToCloudinary(selectedInsFile,p=>{document.getElementById('insProgressBar').style.width=p+'%'});
+      fu=r.url;fp=r.publicId;fn=selectedInsFile.name;
+    }
+    const data={
+      patientId:currentUser.uid,
+      patientEmail:currentUser.email.toLowerCase(),
+      type:t,
+      provider:p,
+      policyNumber:n,
+      sumInsured:document.getElementById('insSum').value||null,
+      premium:document.getElementById('insPremium').value||null,
+      startDate:s,
+      expiryDate:e,
+      helpline:document.getElementById('insPhone').value.trim()||null,
+      members:document.getElementById('insMembers').value.trim()||null,
+      notes:document.getElementById('insNotes').value.trim()||null,
+      fileUrl:fu,filePublicId:fp,fileName:fn,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if(editingInsId){await db.collection('insurance').doc(editingInsId).update(data);showToast('Updated 🎉','success')}
+    else{data.createdAt=firebase.firestore.FieldValue.serverTimestamp();await db.collection('insurance').add(data);showToast('Saved 🎉','success')}
+    closeModal('insurance');
+    document.getElementById('insProgress').style.display='none';
+  }catch(err){showToast('Error: '+err.message,'error')}
+  finally{sb.disabled=false;sb.innerHTML=oh}
+}
+
+async function saveVaccine(){
+  const sb=document.getElementById('vacSaveBtn');
+  let n=document.getElementById('vacName').value;
+  if(n==='Other')n=document.getElementById('vacOther').value.trim();
+  const d=document.getElementById('vacDate').value;
+  if(!n||!d){showToast('Please fill required fields','error');return}
+  const oh=sb.innerHTML;sb.disabled=true;sb.innerHTML='<span class="btn-spinner"></span> Saving...';
+  try{
+    let fu=null,fp=null,fn=null;
+    if(selectedVacFile){
+      sb.innerHTML='<span class="btn-spinner"></span> Uploading...';
+      document.getElementById('vacProgress').style.display='block';
+      const r=await uploadToCloudinary(selectedVacFile,p=>{document.getElementById('vacProgressBar').style.width=p+'%'});
+      fu=r.url;fp=r.publicId;fn=selectedVacFile.name;
+    }
+    const data={
+      patientId:currentUser.uid,
+      patientEmail:currentUser.email.toLowerCase(),
+      vaccineName:n,
+      dose:document.getElementById('vacDose').value||null,
+      dateTaken:d,
+      center:document.getElementById('vacCenter').value.trim()||null,
+      batch:document.getElementById('vacBatch').value.trim()||null,
+      nextDue:document.getElementById('vacNext').value||null,
+      notes:document.getElementById('vacNotes').value.trim()||null,
+      fileUrl:fu,filePublicId:fp,fileName:fn,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if(editingVacId){await db.collection('vaccinations').doc(editingVacId).update(data);showToast('Updated 🎉','success')}
+    else{data.createdAt=firebase.firestore.FieldValue.serverTimestamp();await db.collection('vaccinations').add(data);showToast('Saved 🎉','success')}
+    closeModal('vaccine');
+    document.getElementById('vacProgress').style.display='none';
+  }catch(err){showToast('Error: '+err.message,'error')}
+  finally{sb.disabled=false;sb.innerHTML=oh}
+}
+
+function getExpiryStatus(dateStr){
+  if(!dateStr)return{status:'unknown',label:'NO DATE',cls:''};
+  const exp=new Date(dateStr);
+  const now=new Date();
+  const days=Math.ceil((exp-now)/(1000*60*60*24));
+  if(days<0)return{status:'expired',label:'EXPIRED',cls:'badge-expired',cardCls:'expired'};
+  if(days<=30)return{status:'expiring',label:`${days} DAYS LEFT`,cls:'badge-expiring',cardCls:'expiring'};
+  return{status:'active',label:'ACTIVE',cls:'badge-active',cardCls:''};
+}
+
+function loadInsurance(){
+  db.collection('insurance').where('patientId','==',currentUser.uid).onSnapshot(q=>{
+    const c=document.getElementById('insurance-list');
+    document.getElementById('ins-count').textContent=q.size;
+    let expCount=0;
+    if(q.empty){c.innerHTML=`<div class="empty-state"><div class="emoji">🛡️</div><h3>No insurance policies</h3><p style="margin-top:8px;font-size:0.85rem">Click '+ Add Insurance Policy' to get started.</p></div>`;updateExpCount();return}
+    const list=[];
+    q.forEach(d=>list.push({id:d.id,...d.data()}));
+    list.sort((a,b)=>new Date(a.expiryDate||0)-new Date(b.expiryDate||0));
+    let html='';
+    list.forEach(i=>{
+      const exp=getExpiryStatus(i.expiryDate);
+      if(exp.status==='expiring')expCount++;
+      const expDate=i.expiryDate?new Date(i.expiryDate).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'-';
+      html+=`<div class="vault-card ${exp.cardCls}"><span class="expiry-badge ${exp.cls}">${exp.label}</span><div class="card-header"><div class="card-icon icon-insurance">🛡️</div><div class="card-title"><h3>${escapeHtml(i.provider)}</h3><p>${escapeHtml(i.type)}</p></div></div><div class="card-body"><div class="card-row"><span>Policy No:</span><span>${escapeHtml(i.policyNumber)}</span></div>${i.sumInsured?`<div class="card-row"><span>Sum Insured:</span><span>₹${parseInt(i.sumInsured).toLocaleString('en-IN')}</span></div>`:''}<div class="card-row"><span>Expires:</span><span>${expDate}</span></div>${i.helpline?`<div class="card-row"><span>Helpline:</span><span>${escapeHtml(i.helpline)}</span></div>`:''}${i.members?`<div class="card-row"><span>Members:</span><span>${escapeHtml(i.members)}</span></div>`:''}</div><div class="card-actions">${i.fileUrl?`<a href="${escapeHtml(i.fileUrl)}" target="_blank" class="action-btn">📎 View Doc</a>`:''}${i.helpline?`<a href="tel:${escapeHtml(i.helpline)}" class="action-btn">📞 Call</a>`:''}<button class="action-btn" onclick="editIns('${escapeHtml(i.id)}')">✏️ Edit</button><button class="action-btn danger" onclick="deleteIns('${escapeHtml(i.id)}','${escapeHtml(i.provider)}')">🗑️</button></div></div>`;
+    });
+    c.innerHTML=html;
+    updateExpCount(expCount);
+  },err=>{showToast('Could not load insurance: '+err.message,'error')});
+}
+
+let insExpCount=0,vacExpCount=0;
+function updateExpCount(insExp){if(insExp!==undefined)insExpCount=insExp;document.getElementById('exp-count').textContent=insExpCount+vacExpCount}
+
+function loadVaccines(){
+  db.collection('vaccinations').where('patientId','==',currentUser.uid).onSnapshot(q=>{
+    const c=document.getElementById('vaccine-list');
+    document.getElementById('vac-count').textContent=q.size;
+    let dueCount=0;
+    if(q.empty){c.innerHTML=`<div class="empty-state"><div class="emoji">💉</div><h3>No vaccinations recorded</h3><p style="margin-top:8px;font-size:0.85rem">Click '+ Add Vaccination' to track.</p></div>`;vacExpCount=0;updateExpCount();return}
+    const list=[];
+    q.forEach(d=>list.push({id:d.id,...d.data()}));
+    list.sort((a,b)=>new Date(b.dateTaken||0)-new Date(a.dateTaken||0));
+    let html='';
+    list.forEach(v=>{
+      const dateStr=v.dateTaken?new Date(v.dateTaken).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'-';
+      let badge='<span class="expiry-badge badge-active">RECORDED</span>';
+      let cardCls='';
+      if(v.nextDue){
+        const due=new Date(v.nextDue);
+        const days=Math.ceil((due-new Date())/(1000*60*60*24));
+        if(days<0){badge='<span class="expiry-badge badge-expired">DUE NOW</span>';cardCls='expired';dueCount++}
+        else if(days<=30){badge=`<span class="expiry-badge badge-expiring">DUE IN ${days}D</span>`;cardCls='expiring';dueCount++}
+      }
+      const nextStr=v.nextDue?new Date(v.nextDue).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):null;
+      html+=`<div class="vault-card ${cardCls}">${badge}<div class="card-header"><div class="card-icon icon-vaccine">💉</div><div class="card-title"><h3>${escapeHtml(v.vaccineName)}</h3><p>${escapeHtml(v.dose||'-')}</p></div></div><div class="card-body"><div class="card-row"><span>Date Taken:</span><span>${dateStr}</span></div>${v.center?`<div class="card-row"><span>Center:</span><span>${escapeHtml(v.center)}</span></div>`:''}${v.batch?`<div class="card-row"><span>Batch:</span><span>${escapeHtml(v.batch)}</span></div>`:''}${nextStr?`<div class="card-row"><span>Next Due:</span><span>${nextStr}</span></div>`:''}</div><div class="card-actions">${v.fileUrl?`<a href="${escapeHtml(v.fileUrl)}" target="_blank" class="action-btn">📎 Certificate</a>`:''}<button class="action-btn" onclick="editVac('${escapeHtml(v.id)}')">✏️ Edit</button><button class="action-btn danger" onclick="deleteVac('${escapeHtml(v.id)}','${escapeHtml(v.vaccineName)}')">🗑️</button></div></div>`;
+    });
+    c.innerHTML=html;
+    vacExpCount=dueCount;
+    updateExpCount();
+  },err=>{showToast('Could not load: '+err.message,'error')});
+}
+
+async function editIns(id){
+  try{
+    const doc=await db.collection('insurance').doc(id).get();
+    if(!doc.exists)return;
+    const d=doc.data();
+    editingInsId=id;
+    document.getElementById('insTitle').textContent='✏️ Edit Insurance';
+    document.getElementById('insType').value=d.type||'';
+    document.getElementById('insProvider').value=d.provider||'';
+    document.getElementById('insNumber').value=d.policyNumber||'';
+    document.getElementById('insSum').value=d.sumInsured||'';
+    document.getElementById('insPremium').value=d.premium||'';
+    document.getElementById('insStart').value=d.startDate||'';
+    document.getElementById('insExpiry').value=d.expiryDate||'';
+    document.getElementById('insPhone').value=d.helpline||'';
+    document.getElementById('insMembers').value=d.members||'';
+    document.getElementById('insNotes').value=d.notes||'';
+    document.getElementById('insuranceModal').classList.add('show');
+  }catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+async function editVac(id){
+  try{
+    const doc=await db.collection('vaccinations').doc(id).get();
+    if(!doc.exists)return;
+    const d=doc.data();
+    editingVacId=id;
+    document.getElementById('vacTitle').textContent='✏️ Edit Vaccination';
+    document.getElementById('vacName').value=d.vaccineName||'';
+    document.getElementById('vacDose').value=d.dose||'';
+    document.getElementById('vacDate').value=d.dateTaken||'';
+    document.getElementById('vacCenter').value=d.center||'';
+    document.getElementById('vacBatch').value=d.batch||'';
+    document.getElementById('vacNext').value=d.nextDue||'';
+    document.getElementById('vacNotes').value=d.notes||'';
+    document.getElementById('vaccineModal').classList.add('show');
+  }catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+async function deleteIns(id,name){if(!confirm(`Delete ${name} policy?`))return;try{await db.collection('insurance').doc(id).delete();showToast('Deleted','success')}catch(e){showToast('Failed: '+e.message,'error')}}
+async function deleteVac(id,name){if(!confirm(`Delete ${name} record?`))return;try{await db.collection('vaccinations').doc(id).delete();showToast('Deleted','success')}catch(e){showToast('Failed: '+e.message,'error')}}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal('insurance');closeModal('vaccine')}});
+</script>
+</body>
+</html>

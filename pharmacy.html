@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Pharmacy Locator — HealthChain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060a12;--surface:#0d1520;--surface2:#141f30;--border:#1a2535;--accent:#00d4ff;--accent2:#7c3aed;--text:#e8f0ff;--text-muted:#6b7a99;--success:#10b981;--danger:#ef4444;--warning:#f59e0b}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+#global-loader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.spinner{border:4px solid rgba(0,212,255,0.1);border-top:4px solid var(--accent);border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite}
+.btn-spinner{border:2px solid rgba(255,255,255,0.3);border-top:2px solid white;border-radius:50%;width:14px;height:14px;animation:spin 0.8s linear infinite;display:inline-block}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 5%;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);text-decoration:none}
+.logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.back-btn{background:transparent;color:var(--text-muted);text-decoration:none;font-size:0.9rem;padding:8px 14px;border:1px solid var(--border);border-radius:8px}
+.container{max-width:1100px;margin:0 auto;padding:30px 20px;width:100%;flex:1}
+.header{margin-bottom:25px}
+.header h1{font-family:'Syne',sans-serif;font-size:2rem;margin-bottom:6px}
+.header h1 span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--text-muted);font-size:0.95rem}
+
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:25px;overflow-x:auto}
+.tab{padding:14px 22px;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;font-weight:600;font-size:0.9rem;white-space:nowrap;transition:0.2s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.section{display:none}
+.section.active{display:block}
+
+.search-box{margin-bottom:20px}
+.search-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:50px;padding:13px 20px;color:white;outline:none;font-family:inherit;font-size:0.92rem}
+.search-input:focus{border-color:var(--accent)}
+
+.location-banner{background:linear-gradient(135deg,rgba(0,212,255,0.05),rgba(124,58,237,0.05));border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:14px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.location-icon{font-size:1.3rem}
+.location-content{flex:1;min-width:200px}
+.location-content h4{font-size:0.92rem;margin-bottom:2px}
+.location-content p{color:var(--text-muted);font-size:0.8rem}
+.location-btn{background:transparent;border:1px solid var(--accent);color:var(--accent);padding:7px 14px;border-radius:50px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit}
+
+.add-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;padding:13px 26px;border-radius:50px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;display:inline-flex;align-items:center;gap:8px;margin-bottom:25px}
+.add-btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,212,255,0.3)}
+
+.pharmacy-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
+.pharmacy-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;transition:0.2s;display:flex;flex-direction:column}
+.pharmacy-card:hover{border-color:var(--accent);transform:translateY(-3px)}
+.pharmacy-card.verified{border-color:rgba(16,185,129,0.4)}
+.pharmacy-card.featured{border-color:var(--accent);background:linear-gradient(135deg,rgba(0,212,255,0.05),rgba(124,58,237,0.05))}
+.pharm-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:10px}
+.pharm-icon{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+.pharm-title{flex:1;min-width:0}
+.pharm-title h3{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;margin-bottom:2px;word-break:break-word}
+.pharm-title p{color:var(--accent);font-size:0.78rem;font-weight:600}
+.badge-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.pharm-badge{padding:3px 10px;border-radius:50px;font-size:0.68rem;font-weight:700;text-transform:uppercase}
+.badge-verified{background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.3)}
+.badge-24x7{background:rgba(245,158,11,0.1);color:var(--warning);border:1px solid rgba(245,158,11,0.3)}
+.badge-delivery{background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.3)}
+.badge-featured{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white}
+.pharm-info{font-size:0.85rem;color:var(--text-muted);line-height:1.6;margin-bottom:12px}
+.pharm-info-row{display:flex;align-items:flex-start;gap:6px;padding:3px 0}
+.pharm-info-row .icon{flex-shrink:0;width:16px}
+.pharm-info-row .text{flex:1;word-break:break-word}
+.pharm-info-row strong{color:var(--text)}
+.pharm-actions{display:flex;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap}
+.action-btn{flex:1;min-width:80px;padding:9px 12px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;text-decoration:none;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.action-btn:hover{border-color:var(--accent);color:var(--accent)}
+.action-btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:white}
+.action-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-muted);background:var(--surface);border-radius:14px;border:1px dashed var(--border);grid-column:1/-1}
+.empty-state .emoji{font-size:3.5rem;margin-bottom:10px}
+
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:25px;max-width:550px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-family:'Syne',sans-serif;margin-bottom:18px;font-size:1.25rem}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;margin-bottom:6px;color:var(--text-muted);font-size:0.85rem}
+.input-field{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:white;outline:none;font-family:inherit;font-size:0.9rem}
+.input-field:focus{border-color:var(--accent)}
+select.input-field{appearance:none;background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;cursor:pointer}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.checkbox-row{display:flex;flex-direction:column;gap:8px}
+.checkbox-group{display:flex;align-items:center;gap:8px;background:var(--surface2);padding:10px 14px;border-radius:10px;border:1px solid var(--border)}
+.checkbox-group input[type="checkbox"]{width:18px;height:18px;cursor:pointer;accent-color:var(--accent)}
+.checkbox-group label{margin:0;color:var(--text);font-size:0.86rem;cursor:pointer}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.btn{padding:12px 22px;border-radius:50px;font-weight:600;cursor:pointer;border:none;font-size:0.92rem;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;flex:1}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-muted)}
+
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;z-index:10002;max-width:90%;min-width:280px;transition:transform 0.3s;font-size:0.9rem;display:flex;align-items:center;gap:10px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.toast.success{border-color:var(--success);color:var(--success)}
+.toast.info{border-color:var(--accent);color:var(--accent)}
+
+.info-banner{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2);border-radius:10px;padding:12px 14px;font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:20px}
+.info-banner strong{color:var(--accent)}
+
+.featured-section{background:linear-gradient(135deg,rgba(0,212,255,0.05),rgba(124,58,237,0.05));border:1px solid rgba(0,212,255,0.2);border-radius:16px;padding:20px;margin-bottom:25px}
+.featured-section .section-title{margin-bottom:14px}
+.section-title{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:14px}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="global-loader"><div class="spinner"></div><p style="margin-top:20px;color:var(--text-muted)">Loading...</p></div>
+<div id="toast" class="toast"><span id="toast-icon">ℹ️</span><span id="toast-msg"></span></div>
+
+<!-- Add Pharmacy Modal -->
+<div id="pharmModal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+<h3 id="pharmModalTitle">🏪 Add Pharmacy</h3>
+<form id="pharmForm" onsubmit="event.preventDefault();savePharmacy()">
+<input type="hidden" id="pharmId">
+<div class="form-group">
+<label>Pharmacy Name *</label>
+<input type="text" id="pharmName" class="input-field" placeholder="e.g. Deshmukh Medical Store" maxlength="100" required>
+</div>
+<div class="form-group">
+<label>Owner / Pharmacist Name</label>
+<input type="text" id="pharmOwner" class="input-field" placeholder="Owner name" maxlength="100">
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>Phone *</label>
+<input type="tel" id="pharmPhone" class="input-field" placeholder="10-digit number" pattern="[0-9]{10}" maxlength="10" required>
+</div>
+<div class="form-group">
+<label>License Number</label>
+<input type="text" id="pharmLicense" class="input-field" placeholder="Drug license #" maxlength="50">
+</div>
+</div>
+<div class="form-group">
+<label>Full Address *</label>
+<input type="text" id="pharmAddress" class="input-field" placeholder="Full address" maxlength="300" required>
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>City *</label>
+<input type="text" id="pharmCity" class="input-field" placeholder="City" maxlength="50" required>
+</div>
+<div class="form-group">
+<label>PIN Code *</label>
+<input type="text" id="pharmPin" class="input-field" placeholder="6-digit PIN" pattern="[0-9]{6}" maxlength="6" required>
+</div>
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>Opening Time</label>
+<input type="time" id="pharmOpen" class="input-field" value="09:00">
+</div>
+<div class="form-group">
+<label>Closing Time</label>
+<input type="time" id="pharmClose" class="input-field" value="22:00">
+</div>
+</div>
+<div class="form-group">
+<label>Specialties / Services</label>
+<input type="text" id="pharmSpecialty" class="input-field" placeholder="e.g. Generic medicines, Ayurveda, Surgical" maxlength="200">
+</div>
+<div class="form-group">
+<label>Services Offered</label>
+<div class="checkbox-row">
+<div class="checkbox-group"><input type="checkbox" id="opt24x7"><label for="opt24x7">⏰ Open 24x7</label></div>
+<div class="checkbox-group"><input type="checkbox" id="optDelivery"><label for="optDelivery">🚚 Home Delivery Available</label></div>
+<div class="checkbox-group"><input type="checkbox" id="optWhatsapp"><label for="optWhatsapp">💬 Order via WhatsApp</label></div>
+<div class="checkbox-group"><input type="checkbox" id="optGeneric"><label for="optGeneric">💊 Generic Medicines (Jan Aushadhi)</label></div>
+</div>
+</div>
+<div class="form-group">
+<label>Notes</label>
+<input type="text" id="pharmNotes" class="input-field" placeholder="Additional info" maxlength="200">
+</div>
+<div class="modal-actions">
+<button type="submit" class="btn btn-primary" id="saveBtn">💾 Save Pharmacy</button>
+<button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<nav>
+<a href="index.html" class="logo">Health<span>Chain</span></a>
+<a href="patient.html" class="back-btn">← Back</a>
+</nav>
+
+<div class="container">
+<div class="header">
+<h1>🏪 <span>Pharmacy Locator</span></h1>
+<p>Find verified pharmacies near you. Save your trusted shops for quick access.</p>
+</div>
+
+<div class="info-banner">
+<strong>📍 Verified Shops:</strong> Pharmacies marked with ✓ are verified by HealthChain. To get your shop verified, contact us with your drug license.
+</div>
+
+<div class="search-box">
+<input type="text" class="search-input" id="searchInput" placeholder="🔍 Search by name, city, or PIN code" oninput="filterPharmacies()">
+</div>
+
+<div class="tabs">
+<div class="tab active" onclick="switchTab('saved',this)">💾 My Saved</div>
+<div class="tab" onclick="switchTab('verified',this)">✓ Verified Pharmacies</div>
+</div>
+
+<!-- My Saved Pharmacies -->
+<div class="section active" id="saved-section">
+<button class="add-btn" onclick="openModal()">+ Add Pharmacy</button>
+<div class="pharmacy-grid" id="saved-list">
+<div class="empty-state"><div class="emoji">🏪</div><h3>No saved pharmacies</h3><p style="margin-top:8px;font-size:0.85rem">Add your trusted local pharmacies for quick access.</p></div>
+</div>
+</div>
+
+<!-- Verified Pharmacies (Featured) -->
+<div class="section" id="verified-section">
+<div class="featured-section">
+<div class="section-title">⭐ Featured Verified Pharmacies</div>
+<div class="pharmacy-grid" id="verified-list">
+<div class="empty-state"><div class="emoji">🏪</div><p>Loading verified pharmacies...</p></div>
+</div>
+</div>
+</div>
+
+</div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",authDomain:"helthchain.firebaseapp.com",projectId:"helthchain",storageBucket:"helthchain.appspot.com",messagingSenderId:"682542534348",appId:"1:682542534348:web:bedb3583d7d2eb49a57c69"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+
+let currentUser=null;
+let editingId=null;
+let allSaved=[];
+let allVerified=[];
+
+const toast=document.getElementById('toast');
+const toastMsg=document.getElementById('toast-msg');
+const toastIcon=document.getElementById('toast-icon');
+let toastTimeout=null;
+function showToast(m,t='info'){clearTimeout(toastTimeout);toastMsg.textContent=m;toastIcon.textContent=t==='error'?'⚠️':t==='success'?'✅':'ℹ️';toast.className=`toast ${t} show`;toastTimeout=setTimeout(()=>{toast.classList.remove('show')},4000)}
+function escapeHtml(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+
+// Demo verified pharmacies (you can later add real ones to Firestore)
+const DEMO_VERIFIED=[
+  {id:'demo1',name:'Deshmukh Medical & General Store',owner:'Deshmukh Family',phone:'9876543210',address:'Main Road, Pusad',city:'Pusad',pin:'445204',openTime:'08:00',closeTime:'22:00',specialty:'Family-run pharmacy with all medicines, generics & Ayurveda',is24x7:false,hasDelivery:true,hasWhatsapp:true,hasGeneric:true,verified:true,featured:true,license:'MH/PUSAD/12345'},
+  {id:'demo2',name:'Apollo Pharmacy',phone:'18605000101',address:'Multiple branches across India',city:'Multiple',pin:'-',openTime:'08:00',closeTime:'23:00',specialty:'India\'s largest pharmacy chain. Online + offline.',is24x7:true,hasDelivery:true,hasWhatsapp:true,hasGeneric:true,verified:true},
+  {id:'demo3',name:'1mg Pharmacy',phone:'09999335550',address:'Online platform — pan India',city:'Online',pin:'-',openTime:'00:00',closeTime:'23:59',specialty:'Online medicines + lab tests + doctor consultation',is24x7:true,hasDelivery:true,hasWhatsapp:false,hasGeneric:true,verified:true},
+  {id:'demo4',name:'Jan Aushadhi Kendra',phone:'18001801124',address:'Government generic medicine stores nationwide',city:'Multi-city',pin:'-',openTime:'09:00',closeTime:'21:00',specialty:'Generic medicines at 50-90% lower prices. Government scheme.',is24x7:false,hasDelivery:false,hasWhatsapp:false,hasGeneric:true,verified:true}
+];
+
+auth.onAuthStateChanged(async u=>{
+  if(!u){window.location.replace('login.html');return}
+  currentUser=u;
+  document.getElementById('global-loader').style.display='none';
+  loadSaved();
+  loadVerified();
+});
+
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(name+'-section').classList.add('active');
+}
+
+function openModal(){
+  editingId=null;
+  document.getElementById('pharmModalTitle').textContent='🏪 Add Pharmacy';
+  document.getElementById('pharmForm').reset();
+  document.getElementById('pharmOpen').value='09:00';
+  document.getElementById('pharmClose').value='22:00';
+  document.getElementById('pharmModal').classList.add('show');
+  setTimeout(()=>document.getElementById('pharmName').focus(),100);
+}
+
+function closeModal(){document.getElementById('pharmModal').classList.remove('show');editingId=null}
+
+async function savePharmacy(){
+  const sb=document.getElementById('saveBtn');
+  const n=document.getElementById('pharmName').value.trim();
+  const ph=document.getElementById('pharmPhone').value.trim();
+  const ad=document.getElementById('pharmAddress').value.trim();
+  const ci=document.getElementById('pharmCity').value.trim();
+  const pi=document.getElementById('pharmPin').value.trim();
+  if(!n||!ph||!ad||!ci||!pi){showToast('Please fill required fields','error');return}
+  if(!/^[0-9]{10}$/.test(ph)){showToast('Phone must be 10 digits','error');return}
+  if(!/^[0-9]{6}$/.test(pi)){showToast('PIN must be 6 digits','error');return}
+  const oh=sb.innerHTML;sb.disabled=true;sb.innerHTML='<span class="btn-spinner"></span> Saving...';
+  try{
+    const data={
+      patientId:currentUser.uid,
+      patientEmail:currentUser.email.toLowerCase(),
+      name:n,
+      owner:document.getElementById('pharmOwner').value.trim()||null,
+      phone:ph,
+      license:document.getElementById('pharmLicense').value.trim()||null,
+      address:ad,
+      city:ci,
+      pin:pi,
+      openTime:document.getElementById('pharmOpen').value||null,
+      closeTime:document.getElementById('pharmClose').value||null,
+      specialty:document.getElementById('pharmSpecialty').value.trim()||null,
+      is24x7:document.getElementById('opt24x7').checked,
+      hasDelivery:document.getElementById('optDelivery').checked,
+      hasWhatsapp:document.getElementById('optWhatsapp').checked,
+      hasGeneric:document.getElementById('optGeneric').checked,
+      notes:document.getElementById('pharmNotes').value.trim()||null,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if(editingId){await db.collection('pharmacies').doc(editingId).update(data);showToast('Updated','success')}
+    else{data.createdAt=firebase.firestore.FieldValue.serverTimestamp();await db.collection('pharmacies').add(data);showToast('Saved 🎉','success')}
+    closeModal();
+  }catch(e){showToast('Error: '+e.message,'error')}
+  finally{sb.disabled=false;sb.innerHTML=oh}
+}
+
+function renderPharmacy(p,isVerified){
+  const cardCls=p.featured?'featured':isVerified?'verified':'';
+  let badges='';
+  if(p.featured)badges+='<span class="pharm-badge badge-featured">⭐ FEATURED</span>';
+  if(isVerified&&!p.featured)badges+='<span class="pharm-badge badge-verified">✓ VERIFIED</span>';
+  if(p.is24x7)badges+='<span class="pharm-badge badge-24x7">⏰ 24x7</span>';
+  if(p.hasDelivery)badges+='<span class="pharm-badge badge-delivery">🚚 Delivery</span>';
+  
+  let actions=`<a href="tel:${escapeHtml(p.phone)}" class="action-btn primary">📞 Call</a>`;
+  if(p.hasWhatsapp)actions+=`<a href="https://wa.me/91${escapeHtml(p.phone)}" target="_blank" class="action-btn">💬 WhatsApp</a>`;
+  actions+=`<a href="https://maps.google.com/?q=${encodeURIComponent(p.address+', '+p.city+' '+p.pin)}" target="_blank" class="action-btn">🗺️ Map</a>`;
+  if(!isVerified)actions+=`<button class="action-btn" onclick="editPharm('${escapeHtml(p.id)}')">✏️</button><button class="action-btn danger" onclick="deletePharm('${escapeHtml(p.id)}','${escapeHtml(p.name)}')">🗑️</button>`;
+  
+  const hours=p.is24x7?'Open 24x7':(p.openTime&&p.closeTime?`${formatTime(p.openTime)} - ${formatTime(p.closeTime)}`:'Hours not set');
+  
+  return `<div class="pharmacy-card ${cardCls}"><div class="pharm-header"><div class="pharm-icon">🏪</div><div class="pharm-title"><h3>${escapeHtml(p.name)}</h3>${p.owner?`<p>${escapeHtml(p.owner)}</p>`:''}</div></div>${badges?`<div class="badge-row">${badges}</div>`:''}<div class="pharm-info"><div class="pharm-info-row"><span class="icon">📍</span><span class="text">${escapeHtml(p.address)}, ${escapeHtml(p.city)} - ${escapeHtml(p.pin)}</span></div><div class="pharm-info-row"><span class="icon">📞</span><span class="text"><strong>${escapeHtml(p.phone)}</strong></span></div><div class="pharm-info-row"><span class="icon">⏰</span><span class="text">${hours}</span></div>${p.specialty?`<div class="pharm-info-row"><span class="icon">💊</span><span class="text">${escapeHtml(p.specialty)}</span></div>`:''}${p.hasGeneric?`<div class="pharm-info-row"><span class="icon">✓</span><span class="text" style="color:var(--success)">Generic medicines available</span></div>`:''}</div><div class="pharm-actions">${actions}</div></div>`;
+}
+
+function formatTime(t){if(!t)return'';const[h,m]=t.split(':');const hr=parseInt(h);const ampm=hr>=12?'PM':'AM';const h12=hr%12||12;return `${h12}:${m} ${ampm}`}
+
+function loadSaved(){
+  db.collection('pharmacies').where('patientId','==',currentUser.uid).onSnapshot(q=>{
+    allSaved=[];
+    q.forEach(d=>allSaved.push({id:d.id,...d.data()}));
+    allSaved.sort((a,b)=>(b.createdAt?.toDate()||0)-(a.createdAt?.toDate()||0));
+    renderSaved();
+  },err=>{showToast('Could not load: '+err.message,'error')});
+}
+
+function renderSaved(filter=''){
+  const c=document.getElementById('saved-list');
+  const f=filter.toLowerCase().trim();
+  const filtered=f?allSaved.filter(p=>p.name.toLowerCase().includes(f)||p.city.toLowerCase().includes(f)||p.pin.includes(f)):allSaved;
+  if(filtered.length===0){
+    c.innerHTML=allSaved.length===0?`<div class="empty-state"><div class="emoji">🏪</div><h3>No saved pharmacies</h3><p style="margin-top:8px;font-size:0.85rem">Click '+ Add Pharmacy' to save your trusted shops.</p></div>`:`<div class="empty-state"><div class="emoji">🔍</div><p>No matches found.</p></div>`;
+    return;
+  }
+  let html='';
+  filtered.forEach(p=>html+=renderPharmacy(p,false));
+  c.innerHTML=html;
+}
+
+function loadVerified(){
+  // Use demo data + any real verified entries from Firestore
+  allVerified=[...DEMO_VERIFIED];
+  renderVerified();
+  // Also fetch from Firestore (admin-added verified pharmacies)
+  db.collection('verified_pharmacies').onSnapshot(q=>{
+    const fromDb=[];
+    q.forEach(d=>fromDb.push({id:d.id,...d.data()}));
+    allVerified=[...DEMO_VERIFIED,...fromDb];
+    renderVerified();
+  },()=>{});
+}
+
+function renderVerified(filter=''){
+  const c=document.getElementById('verified-list');
+  const f=filter.toLowerCase().trim();
+  const filtered=f?allVerified.filter(p=>p.name.toLowerCase().includes(f)||p.city.toLowerCase().includes(f)||p.pin.includes(f)):allVerified;
+  if(filtered.length===0){c.innerHTML=`<div class="empty-state"><div class="emoji">🔍</div><p>No matches found.</p></div>`;return}
+  let html='';
+  filtered.forEach(p=>html+=renderPharmacy(p,true));
+  c.innerHTML=html;
+}
+
+function filterPharmacies(){
+  const v=document.getElementById('searchInput').value;
+  renderSaved(v);
+  renderVerified(v);
+}
+
+async function editPharm(id){
+  try{
+    const doc=await db.collection('pharmacies').doc(id).get();
+    if(!doc.exists)return;
+    const p=doc.data();
+    editingId=id;
+    document.getElementById('pharmModalTitle').textContent='✏️ Edit Pharmacy';
+    document.getElementById('pharmName').value=p.name||'';
+    document.getElementById('pharmOwner').value=p.owner||'';
+    document.getElementById('pharmPhone').value=p.phone||'';
+    document.getElementById('pharmLicense').value=p.license||'';
+    document.getElementById('pharmAddress').value=p.address||'';
+    document.getElementById('pharmCity').value=p.city||'';
+    document.getElementById('pharmPin').value=p.pin||'';
+    document.getElementById('pharmOpen').value=p.openTime||'09:00';
+    document.getElementById('pharmClose').value=p.closeTime||'22:00';
+    document.getElementById('pharmSpecialty').value=p.specialty||'';
+    document.getElementById('opt24x7').checked=!!p.is24x7;
+    document.getElementById('optDelivery').checked=!!p.hasDelivery;
+    document.getElementById('optWhatsapp').checked=!!p.hasWhatsapp;
+    document.getElementById('optGeneric').checked=!!p.hasGeneric;
+    document.getElementById('pharmNotes').value=p.notes||'';
+    document.getElementById('pharmModal').classList.add('show');
+  }catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+async function deletePharm(id,name){
+  if(!confirm(`Remove ${name} from saved?`))return;
+  try{await db.collection('pharmacies').doc(id).delete();showToast('Removed','success')}
+  catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+</script>
+</body>
+</html>

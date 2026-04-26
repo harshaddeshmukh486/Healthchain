@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hospital Locator — HealthChain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060a12;--surface:#0d1520;--surface2:#141f30;--border:#1a2535;--accent:#00d4ff;--accent2:#7c3aed;--text:#e8f0ff;--text-muted:#6b7a99;--success:#10b981;--danger:#ef4444;--warning:#f59e0b}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+#global-loader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.spinner{border:4px solid rgba(0,212,255,0.1);border-top:4px solid var(--accent);border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite}
+.btn-spinner{border:2px solid rgba(255,255,255,0.3);border-top:2px solid white;border-radius:50%;width:14px;height:14px;animation:spin 0.8s linear infinite;display:inline-block}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 5%;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);text-decoration:none}
+.logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.back-btn{background:transparent;color:var(--text-muted);text-decoration:none;font-size:0.9rem;padding:8px 14px;border:1px solid var(--border);border-radius:8px}
+.container{max-width:1100px;margin:0 auto;padding:30px 20px;width:100%;flex:1}
+.header{margin-bottom:25px}
+.header h1{font-family:'Syne',sans-serif;font-size:2rem;margin-bottom:6px}
+.header h1 span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--text-muted);font-size:0.95rem}
+
+.search-box{margin-bottom:18px}
+.search-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:50px;padding:13px 20px;color:white;outline:none;font-family:inherit;font-size:0.92rem}
+.search-input:focus{border-color:var(--accent)}
+
+.filter-row{display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;padding-bottom:6px}
+.filter-chip{padding:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:50px;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text-muted);white-space:nowrap;transition:0.2s;font-family:inherit}
+.filter-chip:hover{color:var(--text)}
+.filter-chip.active{background:rgba(0,212,255,0.1);border-color:var(--accent);color:var(--accent)}
+
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:25px;overflow-x:auto}
+.tab{padding:14px 22px;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;font-weight:600;font-size:0.9rem;white-space:nowrap;transition:0.2s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.section{display:none}
+.section.active{display:block}
+
+.add-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;padding:13px 26px;border-radius:50px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;display:inline-flex;align-items:center;gap:8px;margin-bottom:25px}
+.add-btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,212,255,0.3)}
+
+.hospital-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
+.hospital-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;transition:0.2s;display:flex;flex-direction:column}
+.hospital-card:hover{border-color:var(--accent);transform:translateY(-3px)}
+.hospital-card.govt{border-color:rgba(16,185,129,0.4)}
+.hospital-card.featured{border-color:var(--accent);background:linear-gradient(135deg,rgba(0,212,255,0.05),rgba(124,58,237,0.05))}
+.hosp-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:10px}
+.hosp-icon{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+.hosp-title{flex:1;min-width:0}
+.hosp-title h3{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;margin-bottom:2px;word-break:break-word}
+.hosp-title p{color:var(--accent);font-size:0.78rem;font-weight:600}
+.badge-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.hosp-badge{padding:3px 10px;border-radius:50px;font-size:0.68rem;font-weight:700;text-transform:uppercase}
+.badge-govt{background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.3)}
+.badge-private{background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.3)}
+.badge-emergency{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.3)}
+.badge-multispec{background:rgba(245,158,11,0.1);color:var(--warning);border:1px solid rgba(245,158,11,0.3)}
+.badge-featured{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white}
+.hosp-info{font-size:0.85rem;color:var(--text-muted);line-height:1.6;margin-bottom:12px}
+.hosp-info-row{display:flex;align-items:flex-start;gap:6px;padding:3px 0}
+.hosp-info-row .icon{flex-shrink:0;width:16px}
+.hosp-info-row .text{flex:1;word-break:break-word}
+.hosp-info-row strong{color:var(--text)}
+.specialty-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.spec-tag{background:var(--surface2);color:var(--text-muted);padding:3px 9px;border-radius:50px;font-size:0.7rem;border:1px solid var(--border)}
+.hosp-actions{display:flex;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap}
+.action-btn{flex:1;min-width:80px;padding:9px 12px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;text-decoration:none;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.action-btn:hover{border-color:var(--accent);color:var(--accent)}
+.action-btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:white}
+.action-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-muted);background:var(--surface);border-radius:14px;border:1px dashed var(--border);grid-column:1/-1}
+.empty-state .emoji{font-size:3.5rem;margin-bottom:10px}
+
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:25px;max-width:550px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-family:'Syne',sans-serif;margin-bottom:18px;font-size:1.25rem}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;margin-bottom:6px;color:var(--text-muted);font-size:0.85rem}
+.input-field{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:white;outline:none;font-family:inherit;font-size:0.9rem}
+.input-field:focus{border-color:var(--accent)}
+select.input-field{appearance:none;background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;cursor:pointer}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.checkbox-row{display:flex;flex-direction:column;gap:8px}
+.checkbox-group{display:flex;align-items:center;gap:8px;background:var(--surface2);padding:10px 14px;border-radius:10px;border:1px solid var(--border)}
+.checkbox-group input[type="checkbox"]{width:18px;height:18px;cursor:pointer;accent-color:var(--accent)}
+.checkbox-group label{margin:0;color:var(--text);font-size:0.86rem;cursor:pointer}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.btn{padding:12px 22px;border-radius:50px;font-weight:600;cursor:pointer;border:none;font-size:0.92rem;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;flex:1}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-muted)}
+
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;z-index:10002;max-width:90%;min-width:280px;transition:transform 0.3s;font-size:0.9rem;display:flex;align-items:center;gap:10px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.toast.success{border-color:var(--success);color:var(--success)}
+.toast.info{border-color:var(--accent);color:var(--accent)}
+
+.info-banner{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2);border-radius:10px;padding:12px 14px;font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:20px}
+.info-banner strong{color:var(--accent)}
+
+.featured-section{background:linear-gradient(135deg,rgba(0,212,255,0.05),rgba(124,58,237,0.05));border:1px solid rgba(0,212,255,0.2);border-radius:16px;padding:20px;margin-bottom:25px}
+.section-title{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:14px}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="global-loader"><div class="spinner"></div><p style="margin-top:20px;color:var(--text-muted)">Loading...</p></div>
+<div id="toast" class="toast"><span id="toast-icon">ℹ️</span><span id="toast-msg"></span></div>
+
+<!-- Add Hospital Modal -->
+<div id="hospModal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+<h3 id="hospModalTitle">🏥 Add Hospital</h3>
+<form id="hospForm" onsubmit="event.preventDefault();saveHospital()">
+<input type="hidden" id="hospId">
+<div class="form-group">
+<label>Hospital Name *</label>
+<input type="text" id="hospName" class="input-field" placeholder="e.g. Apollo Hospitals" maxlength="150" required>
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>Type *</label>
+<select id="hospType" class="input-field" required>
+<option value="">Select</option>
+<option value="Government">Government</option>
+<option value="Private">Private</option>
+<option value="Trust">Trust/NGO</option>
+<option value="Nursing Home">Nursing Home</option>
+<option value="Clinic">Clinic</option>
+</select>
+</div>
+<div class="form-group">
+<label>Phone *</label>
+<input type="tel" id="hospPhone" class="input-field" placeholder="Hospital number" maxlength="15" required>
+</div>
+</div>
+<div class="form-group">
+<label>Specialties (comma-separated)</label>
+<input type="text" id="hospSpecialties" class="input-field" placeholder="e.g. Cardiology, Neurology, Orthopedics" maxlength="300">
+</div>
+<div class="form-group">
+<label>Full Address *</label>
+<input type="text" id="hospAddress" class="input-field" placeholder="Complete address" maxlength="300" required>
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>City *</label>
+<input type="text" id="hospCity" class="input-field" placeholder="City" maxlength="50" required>
+</div>
+<div class="form-group">
+<label>PIN Code *</label>
+<input type="text" id="hospPin" class="input-field" placeholder="6-digit PIN" pattern="[0-9]{6}" maxlength="6" required>
+</div>
+</div>
+<div class="form-group">
+<label>Emergency Number</label>
+<input type="tel" id="hospEmergency" class="input-field" placeholder="Emergency contact" maxlength="15">
+</div>
+<div class="form-group">
+<label>Services</label>
+<div class="checkbox-row">
+<div class="checkbox-group"><input type="checkbox" id="opt24x7"><label for="opt24x7">⏰ 24x7 Emergency</label></div>
+<div class="checkbox-group"><input type="checkbox" id="optAmbulance"><label for="optAmbulance">🚑 Ambulance Service</label></div>
+<div class="checkbox-group"><input type="checkbox" id="optICU"><label for="optICU">🏥 ICU Available</label></div>
+<div class="checkbox-group"><input type="checkbox" id="optInsurance"><label for="optInsurance">💳 Insurance Cashless</label></div>
+<div class="checkbox-group"><input type="checkbox" id="optAyushman"><label for="optAyushman">🪪 Ayushman Bharat (PMJAY)</label></div>
+</div>
+</div>
+<div class="form-group">
+<label>Notes</label>
+<input type="text" id="hospNotes" class="input-field" placeholder="Doctor name, visit experience" maxlength="200">
+</div>
+<div class="modal-actions">
+<button type="submit" class="btn btn-primary" id="saveBtn">💾 Save Hospital</button>
+<button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<nav>
+<a href="index.html" class="logo">Health<span>Chain</span></a>
+<a href="patient.html" class="back-btn">← Back</a>
+</nav>
+
+<div class="container">
+<div class="header">
+<h1>🏥 <span>Hospital Locator</span></h1>
+<p>Find hospitals, save your trusted ones, and access in emergencies.</p>
+</div>
+
+<div class="info-banner">
+<strong>📍 Tip:</strong> Save hospitals you trust for quick access during emergencies. We're adding more verified hospitals every week.
+</div>
+
+<div class="search-box">
+<input type="text" class="search-input" id="searchInput" placeholder="🔍 Search by name, city, or specialty" oninput="filterAll()">
+</div>
+
+<div class="filter-row" id="filterRow">
+<div class="filter-chip active" data-filter="all" onclick="setFilter(this)">All</div>
+<div class="filter-chip" data-filter="emergency" onclick="setFilter(this)">🚨 24x7 Emergency</div>
+<div class="filter-chip" data-filter="ambulance" onclick="setFilter(this)">🚑 Ambulance</div>
+<div class="filter-chip" data-filter="ayushman" onclick="setFilter(this)">🪪 Ayushman</div>
+<div class="filter-chip" data-filter="govt" onclick="setFilter(this)">🏛️ Government</div>
+<div class="filter-chip" data-filter="private" onclick="setFilter(this)">🏢 Private</div>
+</div>
+
+<div class="tabs">
+<div class="tab active" onclick="switchTab('saved',this)">💾 My Saved</div>
+<div class="tab" onclick="switchTab('directory',this)">📋 Hospital Directory</div>
+</div>
+
+<div class="section active" id="saved-section">
+<button class="add-btn" onclick="openModal()">+ Add Hospital</button>
+<div class="hospital-grid" id="saved-list">
+<div class="empty-state"><div class="emoji">🏥</div><h3>No saved hospitals</h3><p style="margin-top:8px;font-size:0.85rem">Add hospitals you trust for quick access.</p></div>
+</div>
+</div>
+
+<div class="section" id="directory-section">
+<div class="featured-section">
+<div class="section-title">🌟 Major Indian Hospitals</div>
+<div class="hospital-grid" id="directory-list"></div>
+</div>
+</div>
+
+</div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",authDomain:"helthchain.firebaseapp.com",projectId:"helthchain",storageBucket:"helthchain.appspot.com",messagingSenderId:"682542534348",appId:"1:682542534348:web:bedb3583d7d2eb49a57c69"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+
+let currentUser=null;
+let editingId=null;
+let allSaved=[];
+let activeFilter='all';
+
+const toast=document.getElementById('toast');
+const toastMsg=document.getElementById('toast-msg');
+const toastIcon=document.getElementById('toast-icon');
+let toastTimeout=null;
+function showToast(m,t='info'){clearTimeout(toastTimeout);toastMsg.textContent=m;toastIcon.textContent=t==='error'?'⚠️':t==='success'?'✅':'ℹ️';toast.className=`toast ${t} show`;toastTimeout=setTimeout(()=>{toast.classList.remove('show')},4000)}
+function escapeHtml(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+
+// Major Indian Hospitals Directory
+const DIRECTORY=[
+  {id:'d1',name:'AIIMS Delhi',type:'Government',phone:'01126588500',emergency:'01126588500',address:'Ansari Nagar, New Delhi',city:'Delhi',pin:'110029',specialties:['All specialties','Multi-super-specialty','Trauma','Cardiology','Neurology','Oncology'],is24x7:true,hasAmbulance:true,hasICU:true,hasAyushman:true,featured:true},
+  {id:'d2',name:'Apollo Hospitals',type:'Private',phone:'18605000100',emergency:'18605000100',address:'Multiple branches across India',city:'Multi-city',pin:'-',specialties:['Multi-specialty','Cardiology','Oncology','Transplants','Neurology'],is24x7:true,hasAmbulance:true,hasICU:true,hasInsurance:true,featured:true},
+  {id:'d3',name:'Fortis Healthcare',type:'Private',phone:'18001022200',emergency:'18001022200',address:'Multiple branches',city:'Multi-city',pin:'-',specialties:['Multi-specialty','Cardiology','Orthopedics','Neurology'],is24x7:true,hasAmbulance:true,hasICU:true,hasInsurance:true},
+  {id:'d4',name:'Max Healthcare',type:'Private',phone:'01140554055',address:'Delhi NCR & other cities',city:'Multi-city',pin:'-',specialties:['Multi-specialty','Cardiology','Cancer','Orthopedics'],is24x7:true,hasAmbulance:true,hasICU:true,hasInsurance:true},
+  {id:'d5',name:'Tata Memorial Hospital',type:'Trust',phone:'02224177000',address:'Dr E Borges Road, Parel, Mumbai',city:'Mumbai',pin:'400012',specialties:['Cancer treatment','Oncology','Radiation','Chemotherapy'],is24x7:true,hasICU:true,hasAyushman:true},
+  {id:'d6',name:'KEM Hospital Mumbai',type:'Government',phone:'02224107000',address:'Acharya Donde Marg, Parel, Mumbai',city:'Mumbai',pin:'400012',specialties:['Multi-specialty','Government','All departments'],is24x7:true,hasAmbulance:true,hasICU:true,hasAyushman:true},
+  {id:'d7',name:'PGI Chandigarh',type:'Government',phone:'01722747585',address:'Sector 12, Chandigarh',city:'Chandigarh',pin:'160012',specialties:['Multi-specialty','Research','All departments'],is24x7:true,hasAmbulance:true,hasICU:true,hasAyushman:true},
+  {id:'d8',name:'CMC Vellore',type:'Trust',phone:'04162281000',address:'Ida Scudder Road, Vellore',city:'Vellore',pin:'632004',specialties:['Multi-specialty','Christian Medical College'],is24x7:true,hasAmbulance:true,hasICU:true},
+  {id:'d9',name:'Manipal Hospitals',type:'Private',phone:'18001027070',address:'Multiple branches',city:'Multi-city',pin:'-',specialties:['Multi-specialty','Cardiology','Neurology'],is24x7:true,hasAmbulance:true,hasICU:true,hasInsurance:true},
+  {id:'d10',name:'Narayana Health',type:'Private',phone:'08066660000',address:'Bangalore & other cities',city:'Multi-city',pin:'-',specialties:['Cardiac care','Multi-specialty','Affordable'],is24x7:true,hasAmbulance:true,hasICU:true,hasInsurance:true},
+  {id:'d11',name:'Sir Ganga Ram Hospital',type:'Trust',phone:'01142251111',address:'Rajinder Nagar, New Delhi',city:'Delhi',pin:'110060',specialties:['Multi-specialty','Cardiology','Liver'],is24x7:true,hasAmbulance:true,hasICU:true,hasInsurance:true},
+  {id:'d12',name:'Christian Medical College Ludhiana',type:'Trust',phone:'01615028001',address:'Brown Road, Ludhiana',city:'Ludhiana',pin:'141008',specialties:['Multi-specialty','All departments'],is24x7:true,hasAmbulance:true,hasICU:true},
+  {id:'d13',name:'Lilavati Hospital',type:'Trust',phone:'02226751000',address:'A-791, Bandra (W), Mumbai',city:'Mumbai',pin:'400050',specialties:['Multi-specialty','Cardiology','Neurology'],is24x7:true,hasAmbulance:true,hasICU:true,hasInsurance:true},
+  {id:'d14',name:'Yashoda Hospitals Hyderabad',type:'Private',phone:'04067002424',address:'Multiple branches Hyderabad',city:'Hyderabad',pin:'-',specialties:['Multi-specialty','Cardiology','Oncology'],is24x7:true,hasAmbulance:true,hasICU:true,hasInsurance:true},
+  {id:'d15',name:'BJ Medical College Pune',type:'Government',phone:'02026128000',address:'Sasoon Road, Pune',city:'Pune',pin:'411001',specialties:['Multi-specialty','Government','Sasoon Hospital'],is24x7:true,hasAmbulance:true,hasICU:true,hasAyushman:true}
+];
+
+auth.onAuthStateChanged(async u=>{
+  if(!u){window.location.replace('login.html');return}
+  currentUser=u;
+  document.getElementById('global-loader').style.display='none';
+  loadSaved();
+  renderDirectory();
+});
+
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(name+'-section').classList.add('active');
+}
+
+function setFilter(el){
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  activeFilter=el.dataset.filter;
+  filterAll();
+}
+
+function openModal(){
+  editingId=null;
+  document.getElementById('hospModalTitle').textContent='🏥 Add Hospital';
+  document.getElementById('hospForm').reset();
+  document.getElementById('hospModal').classList.add('show');
+  setTimeout(()=>document.getElementById('hospName').focus(),100);
+}
+
+function closeModal(){document.getElementById('hospModal').classList.remove('show');editingId=null}
+
+async function saveHospital(){
+  const sb=document.getElementById('saveBtn');
+  const n=document.getElementById('hospName').value.trim();
+  const t=document.getElementById('hospType').value;
+  const p=document.getElementById('hospPhone').value.trim();
+  const a=document.getElementById('hospAddress').value.trim();
+  const c=document.getElementById('hospCity').value.trim();
+  const pi=document.getElementById('hospPin').value.trim();
+  if(!n||!t||!p||!a||!c||!pi){showToast('Please fill required fields','error');return}
+  if(!/^[0-9]{6}$/.test(pi)){showToast('PIN must be 6 digits','error');return}
+  const oh=sb.innerHTML;sb.disabled=true;sb.innerHTML='<span class="btn-spinner"></span> Saving...';
+  try{
+    const specs=document.getElementById('hospSpecialties').value.split(',').map(s=>s.trim()).filter(s=>s);
+    const data={
+      patientId:currentUser.uid,
+      patientEmail:currentUser.email.toLowerCase(),
+      name:n,type:t,phone:p,
+      emergency:document.getElementById('hospEmergency').value.trim()||null,
+      specialties:specs,
+      address:a,city:c,pin:pi,
+      is24x7:document.getElementById('opt24x7').checked,
+      hasAmbulance:document.getElementById('optAmbulance').checked,
+      hasICU:document.getElementById('optICU').checked,
+      hasInsurance:document.getElementById('optInsurance').checked,
+      hasAyushman:document.getElementById('optAyushman').checked,
+      notes:document.getElementById('hospNotes').value.trim()||null,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if(editingId){await db.collection('hospitals').doc(editingId).update(data);showToast('Updated','success')}
+    else{data.createdAt=firebase.firestore.FieldValue.serverTimestamp();await db.collection('hospitals').add(data);showToast('Saved 🎉','success')}
+    closeModal();
+  }catch(e){showToast('Error: '+e.message,'error')}
+  finally{sb.disabled=false;sb.innerHTML=oh}
+}
+
+function renderHospital(h,canEdit){
+  const cardCls=h.featured?'featured':h.type==='Government'?'govt':'';
+  let badges='';
+  if(h.featured)badges+='<span class="hosp-badge badge-featured">⭐ MAJOR</span>';
+  if(h.type==='Government')badges+='<span class="hosp-badge badge-govt">🏛️ GOVT</span>';
+  else if(h.type==='Private')badges+='<span class="hosp-badge badge-private">🏢 PRIVATE</span>';
+  if(h.is24x7)badges+='<span class="hosp-badge badge-emergency">🚨 24x7</span>';
+  if(h.hasAyushman)badges+='<span class="hosp-badge badge-multispec">🪪 PMJAY</span>';
+  
+  let actions=`<a href="tel:${escapeHtml(h.phone)}" class="action-btn primary">📞 Call</a>`;
+  if(h.emergency&&h.emergency!==h.phone)actions+=`<a href="tel:${escapeHtml(h.emergency)}" class="action-btn" style="border-color:var(--danger);color:var(--danger)">🚨 Emergency</a>`;
+  actions+=`<a href="https://maps.google.com/?q=${encodeURIComponent(h.name+', '+h.address+', '+h.city)}" target="_blank" class="action-btn">🗺️ Map</a>`;
+  if(canEdit)actions+=`<button class="action-btn" onclick="editHosp('${escapeHtml(h.id)}')">✏️</button><button class="action-btn danger" onclick="deleteHosp('${escapeHtml(h.id)}','${escapeHtml(h.name)}')">🗑️</button>`;
+  
+  let specsHtml='';
+  if(h.specialties&&h.specialties.length){
+    specsHtml='<div class="specialty-tags">';
+    h.specialties.slice(0,5).forEach(s=>{specsHtml+=`<span class="spec-tag">${escapeHtml(s)}</span>`});
+    if(h.specialties.length>5)specsHtml+=`<span class="spec-tag">+${h.specialties.length-5}</span>`;
+    specsHtml+='</div>';
+  }
+  
+  return `<div class="hospital-card ${cardCls}"><div class="hosp-header"><div class="hosp-icon">🏥</div><div class="hosp-title"><h3>${escapeHtml(h.name)}</h3><p>${escapeHtml(h.type)}</p></div></div>${badges?`<div class="badge-row">${badges}</div>`:''}<div class="hosp-info"><div class="hosp-info-row"><span class="icon">📍</span><span class="text">${escapeHtml(h.address)}, ${escapeHtml(h.city)}${h.pin&&h.pin!=='-'?' - '+escapeHtml(h.pin):''}</span></div><div class="hosp-info-row"><span class="icon">📞</span><span class="text"><strong>${escapeHtml(h.phone)}</strong></span></div>${h.hasAmbulance?`<div class="hosp-info-row"><span class="icon">🚑</span><span class="text" style="color:var(--success)">Ambulance available</span></div>`:''}${h.hasICU?`<div class="hosp-info-row"><span class="icon">🏥</span><span class="text">ICU Available</span></div>`:''}${specsHtml}</div><div class="hosp-actions">${actions}</div></div>`;
+}
+
+function loadSaved(){
+  db.collection('hospitals').where('patientId','==',currentUser.uid).onSnapshot(q=>{
+    allSaved=[];
+    q.forEach(d=>allSaved.push({id:d.id,...d.data()}));
+    allSaved.sort((a,b)=>(b.createdAt?.toDate()||0)-(a.createdAt?.toDate()||0));
+    filterAll();
+  },err=>{showToast('Could not load: '+err.message,'error')});
+}
+
+function applyFilters(list){
+  const search=document.getElementById('searchInput').value.toLowerCase().trim();
+  return list.filter(h=>{
+    if(search){
+      const matches=h.name.toLowerCase().includes(search)||h.city.toLowerCase().includes(search)||(h.specialties||[]).some(s=>s.toLowerCase().includes(search));
+      if(!matches)return false;
+    }
+    if(activeFilter==='emergency'&&!h.is24x7)return false;
+    if(activeFilter==='ambulance'&&!h.hasAmbulance)return false;
+    if(activeFilter==='ayushman'&&!h.hasAyushman)return false;
+    if(activeFilter==='govt'&&h.type!=='Government')return false;
+    if(activeFilter==='private'&&h.type!=='Private')return false;
+    return true;
+  });
+}
+
+function filterAll(){
+  // Saved
+  const c1=document.getElementById('saved-list');
+  const filtered1=applyFilters(allSaved);
+  if(filtered1.length===0){
+    c1.innerHTML=allSaved.length===0?`<div class="empty-state"><div class="emoji">🏥</div><h3>No saved hospitals</h3><p style="margin-top:8px;font-size:0.85rem">Add hospitals you trust for quick access.</p></div>`:`<div class="empty-state"><div class="emoji">🔍</div><p>No matches.</p></div>`;
+  }else{
+    let h='';filtered1.forEach(x=>h+=renderHospital(x,true));c1.innerHTML=h;
+  }
+  // Directory
+  renderDirectory();
+}
+
+function renderDirectory(){
+  const c=document.getElementById('directory-list');
+  const filtered=applyFilters(DIRECTORY);
+  if(filtered.length===0){c.innerHTML=`<div class="empty-state"><div class="emoji">🔍</div><p>No matches.</p></div>`;return}
+  let html='';
+  filtered.forEach(h=>html+=renderHospital(h,false));
+  c.innerHTML=html;
+}
+
+async function editHosp(id){
+  try{
+    const doc=await db.collection('hospitals').doc(id).get();
+    if(!doc.exists)return;
+    const h=doc.data();
+    editingId=id;
+    document.getElementById('hospModalTitle').textContent='✏️ Edit Hospital';
+    document.getElementById('hospName').value=h.name||'';
+    document.getElementById('hospType').value=h.type||'';
+    document.getElementById('hospPhone').value=h.phone||'';
+    document.getElementById('hospEmergency').value=h.emergency||'';
+    document.getElementById('hospSpecialties').value=(h.specialties||[]).join(', ');
+    document.getElementById('hospAddress').value=h.address||'';
+    document.getElementById('hospCity').value=h.city||'';
+    document.getElementById('hospPin').value=h.pin||'';
+    document.getElementById('opt24x7').checked=!!h.is24x7;
+    document.getElementById('optAmbulance').checked=!!h.hasAmbulance;
+    document.getElementById('optICU').checked=!!h.hasICU;
+    document.getElementById('optInsurance').checked=!!h.hasInsurance;
+    document.getElementById('optAyushman').checked=!!h.hasAyushman;
+    document.getElementById('hospNotes').value=h.notes||'';
+    document.getElementById('hospModal').classList.add('show');
+  }catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+async function deleteHosp(id,name){
+  if(!confirm(`Remove ${name}?`))return;
+  try{await db.collection('hospitals').doc(id).delete();showToast('Removed','success')}
+  catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+</script>
+</body>
+</html>

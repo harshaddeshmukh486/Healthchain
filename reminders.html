@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Health Reminders — HealthChain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060a12;--surface:#0d1520;--surface2:#141f30;--border:#1a2535;--accent:#00d4ff;--accent2:#7c3aed;--text:#e8f0ff;--text-muted:#6b7a99;--success:#10b981;--danger:#ef4444;--warning:#f59e0b}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+#global-loader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.spinner{border:4px solid rgba(0,212,255,0.1);border-top:4px solid var(--accent);border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite}
+.btn-spinner{border:2px solid rgba(255,255,255,0.3);border-top:2px solid white;border-radius:50%;width:14px;height:14px;animation:spin 0.8s linear infinite;display:inline-block}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 5%;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);text-decoration:none}
+.logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.back-btn{background:transparent;color:var(--text-muted);text-decoration:none;font-size:0.9rem;padding:8px 14px;border:1px solid var(--border);border-radius:8px}
+.container{max-width:1000px;margin:0 auto;padding:30px 20px;width:100%;flex:1}
+.header{margin-bottom:25px}
+.header h1{font-family:'Syne',sans-serif;font-size:2rem;margin-bottom:6px}
+.header h1 span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--text-muted);font-size:0.95rem}
+
+.summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:25px}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;align-items:center;gap:14px}
+.sum-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+.icon-due{background:rgba(239,68,68,0.1);color:var(--danger)}
+.icon-soon{background:rgba(245,158,11,0.1);color:var(--warning)}
+.icon-active{background:rgba(16,185,129,0.1);color:var(--success)}
+.icon-total{background:rgba(0,212,255,0.1);color:var(--accent)}
+.sum-info h3{font-size:1.6rem;margin-bottom:2px}
+.sum-info p{color:var(--text-muted);font-size:0.82rem}
+
+.add-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;padding:13px 26px;border-radius:50px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;display:inline-flex;align-items:center;gap:8px;margin-bottom:25px}
+.add-btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,212,255,0.3)}
+
+.section-title{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:15px;display:flex;align-items:center;gap:10px}
+
+.reminder-list{display:grid;gap:12px;margin-bottom:30px}
+.reminder-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;transition:0.2s}
+.reminder-card:hover{border-color:var(--accent)}
+.reminder-card.overdue{border-color:rgba(239,68,68,0.4);background:rgba(239,68,68,0.03)}
+.reminder-card.upcoming{border-color:rgba(245,158,11,0.4)}
+.reminder-card.completed{opacity:0.6}
+.rem-info{flex:1;min-width:0}
+.rem-title{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rem-icon{width:28px;height:28px;border-radius:8px;background:var(--surface2);display:inline-flex;align-items:center;justify-content:center;font-size:0.95rem;flex-shrink:0}
+.rem-meta{font-size:0.83rem;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:12px;margin-top:5px}
+.rem-meta span{display:flex;align-items:center;gap:4px}
+.rem-meta strong{color:var(--text)}
+.rem-actions{display:flex;gap:6px;flex-shrink:0}
+.icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.95rem;font-family:inherit}
+.icon-btn:hover{color:var(--text)}
+.icon-btn.success{background:rgba(16,185,129,0.1);color:var(--success);border-color:rgba(16,185,129,0.3)}
+.icon-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+
+.priority-badge{padding:4px 10px;border-radius:50px;font-size:0.7rem;font-weight:700;text-transform:uppercase}
+.pri-high{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.3)}
+.pri-medium{background:rgba(245,158,11,0.1);color:var(--warning);border:1px solid rgba(245,158,11,0.3)}
+.pri-low{background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.3)}
+
+.empty-state{text-align:center;padding:35px 20px;color:var(--text-muted);background:var(--surface);border-radius:12px;border:1px dashed var(--border)}
+.empty-state .emoji{font-size:2.5rem;margin-bottom:10px}
+
+.suggestions-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:25px}
+.suggestion-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:0.2s}
+.suggestion-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.sug-icon{font-size:1.6rem;margin-bottom:8px}
+.sug-title{font-family:'Syne',sans-serif;font-size:0.95rem;font-weight:700;margin-bottom:4px}
+.sug-desc{color:var(--text-muted);font-size:0.78rem;line-height:1.4}
+
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:25px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-family:'Syne',sans-serif;margin-bottom:18px;font-size:1.25rem}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;margin-bottom:6px;color:var(--text-muted);font-size:0.85rem}
+.input-field{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:white;outline:none;font-family:inherit;font-size:0.9rem}
+.input-field:focus{border-color:var(--accent)}
+select.input-field{appearance:none;background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;cursor:pointer}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.btn{padding:12px 22px;border-radius:50px;font-weight:600;cursor:pointer;border:none;font-size:0.92rem;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;flex:1}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-muted)}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;z-index:10002;max-width:90%;min-width:280px;transition:transform 0.3s;font-size:0.9rem;display:flex;align-items:center;gap:10px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.toast.success{border-color:var(--success);color:var(--success)}
+.toast.info{border-color:var(--accent);color:var(--accent)}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}.reminder-card{flex-direction:column;align-items:flex-start}.rem-actions{width:100%;justify-content:flex-end}}
+</style>
+</head>
+<body>
+<div id="global-loader"><div class="spinner"></div><p style="margin-top:20px;color:var(--text-muted)">Loading...</p></div>
+<div id="toast" class="toast"><span id="toast-icon">ℹ️</span><span id="toast-msg"></span></div>
+
+<div id="remModal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+<h3 id="remModalTitle">🔔 Add Reminder</h3>
+<form id="remForm" onsubmit="event.preventDefault();saveReminder()">
+<input type="hidden" id="remId">
+<div class="form-group">
+<label>Reminder Type *</label>
+<select id="remType" class="input-field" required>
+<option value="">Select type</option>
+<option value="checkup">🩺 Health Checkup</option>
+<option value="vaccination">💉 Vaccination</option>
+<option value="medicine">💊 Medicine Refill</option>
+<option value="appointment">📅 Doctor Appointment</option>
+<option value="lab-test">🔬 Lab Test</option>
+<option value="prescription">📋 Prescription Renewal</option>
+<option value="exercise">🏃 Exercise</option>
+<option value="hydration">💧 Water/Hydration</option>
+<option value="diet">🥗 Diet/Meal</option>
+<option value="custom">✨ Custom</option>
+</select>
+</div>
+<div class="form-group">
+<label>Title *</label>
+<input type="text" id="remTitle" class="input-field" placeholder="e.g. Annual Blood Test" maxlength="100" required>
+</div>
+<div class="form-group">
+<label>Description</label>
+<input type="text" id="remDesc" class="input-field" placeholder="Additional details" maxlength="200">
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>Due Date *</label>
+<input type="date" id="remDate" class="input-field" required>
+</div>
+<div class="form-group">
+<label>Reminder Time</label>
+<input type="time" id="remTime" class="input-field">
+</div>
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>Priority *</label>
+<select id="remPriority" class="input-field" required>
+<option value="medium">⚠️ Medium</option>
+<option value="high">🚨 High</option>
+<option value="low">✅ Low</option>
+</select>
+</div>
+<div class="form-group">
+<label>Repeat</label>
+<select id="remRepeat" class="input-field">
+<option value="none">No Repeat</option>
+<option value="daily">Daily</option>
+<option value="weekly">Weekly</option>
+<option value="monthly">Monthly</option>
+<option value="quarterly">Every 3 months</option>
+<option value="yearly">Yearly</option>
+</select>
+</div>
+</div>
+<div class="modal-actions">
+<button type="submit" class="btn btn-primary" id="saveBtn">💾 Save Reminder</button>
+<button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<nav>
+<a href="index.html" class="logo">Health<span>Chain</span></a>
+<a href="patient.html" class="back-btn">← Back</a>
+</nav>
+
+<div class="container">
+<div class="header">
+<h1>🔔 <span>Health Reminders</span></h1>
+<p>Never miss an important health task. Set reminders for checkups, medicines, and more.</p>
+</div>
+
+<div class="summary-row">
+<div class="summary-card"><div class="sum-icon icon-due">🚨</div><div class="sum-info"><h3 id="overdue-count">0</h3><p>Overdue</p></div></div>
+<div class="summary-card"><div class="sum-icon icon-soon">⏰</div><div class="sum-info"><h3 id="upcoming-count">0</h3><p>Due in 7 days</p></div></div>
+<div class="summary-card"><div class="sum-icon icon-active">✅</div><div class="sum-info"><h3 id="active-count">0</h3><p>Active</p></div></div>
+<div class="summary-card"><div class="sum-icon icon-total">📋</div><div class="sum-info"><h3 id="total-count">0</h3><p>Total</p></div></div>
+</div>
+
+<button class="add-btn" onclick="openModal()">+ Add Reminder</button>
+
+<div class="section-title">⚡ Quick Add</div>
+<div class="suggestions-grid">
+<div class="suggestion-card" onclick="quickAdd('checkup','Annual Health Checkup','Full body checkup','high',365)">
+<div class="sug-icon">🩺</div>
+<div class="sug-title">Annual Checkup</div>
+<div class="sug-desc">Yearly full body health screening</div>
+</div>
+<div class="suggestion-card" onclick="quickAdd('vaccination','Flu Vaccine','Annual flu shot','medium',365)">
+<div class="sug-icon">💉</div>
+<div class="sug-title">Flu Vaccine</div>
+<div class="sug-desc">Yearly influenza vaccination</div>
+</div>
+<div class="suggestion-card" onclick="quickAdd('lab-test','Blood Sugar Test','Diabetes screening','medium',180)">
+<div class="sug-icon">🩸</div>
+<div class="sug-title">Blood Sugar Test</div>
+<div class="sug-desc">Every 6 months diabetes check</div>
+</div>
+<div class="suggestion-card" onclick="quickAdd('lab-test','Lipid Profile','Cholesterol test','medium',365)">
+<div class="sug-icon">❤️</div>
+<div class="sug-title">Cholesterol Test</div>
+<div class="sug-desc">Annual cardiac risk assessment</div>
+</div>
+<div class="suggestion-card" onclick="quickAdd('checkup','Dental Cleaning','Teeth scaling','low',180)">
+<div class="sug-icon">🦷</div>
+<div class="sug-title">Dental Checkup</div>
+<div class="sug-desc">Every 6 months teeth care</div>
+</div>
+<div class="suggestion-card" onclick="quickAdd('checkup','Eye Test','Vision check','low',365)">
+<div class="sug-icon">👁️</div>
+<div class="sug-title">Eye Test</div>
+<div class="sug-desc">Annual eye examination</div>
+</div>
+</div>
+
+<div class="section-title">🚨 Overdue</div>
+<div class="reminder-list" id="overdue-list">
+<div class="empty-state"><div class="emoji">✅</div><p>No overdue reminders</p></div>
+</div>
+
+<div class="section-title">⏰ Upcoming (Next 7 Days)</div>
+<div class="reminder-list" id="upcoming-list">
+<div class="empty-state"><div class="emoji">📭</div><p>No upcoming reminders</p></div>
+</div>
+
+<div class="section-title">📋 All Active Reminders</div>
+<div class="reminder-list" id="all-list">
+<div class="empty-state"><div class="emoji">🔔</div><p>No active reminders</p></div>
+</div>
+
+<div class="section-title">✅ Completed</div>
+<div class="reminder-list" id="completed-list">
+<div class="empty-state"><div class="emoji">📭</div><p>No completed reminders yet</p></div>
+</div>
+
+</div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",authDomain:"helthchain.firebaseapp.com",projectId:"helthchain",storageBucket:"helthchain.appspot.com",messagingSenderId:"682542534348",appId:"1:682542534348:web:bedb3583d7d2eb49a57c69"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+let currentUser=null;
+let editingId=null;
+const toast=document.getElementById('toast');
+const toastMsg=document.getElementById('toast-msg');
+const toastIcon=document.getElementById('toast-icon');
+let toastTimeout=null;
+function showToast(m,t='info'){clearTimeout(toastTimeout);toastMsg.textContent=m;toastIcon.textContent=t==='error'?'⚠️':t==='success'?'✅':'ℹ️';toast.className=`toast ${t} show`;toastTimeout=setTimeout(()=>{toast.classList.remove('show')},4000)}
+function escapeHtml(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+
+const typeIcons={checkup:'🩺',vaccination:'💉',medicine:'💊',appointment:'📅','lab-test':'🔬',prescription:'📋',exercise:'🏃',hydration:'💧',diet:'🥗',custom:'✨'};
+
+auth.onAuthStateChanged(async u=>{
+  if(!u){window.location.replace('login.html');return}
+  currentUser=u;
+  document.getElementById('global-loader').style.display='none';
+  document.getElementById('remDate').min=new Date().toISOString().split('T')[0];
+  loadReminders();
+});
+
+function openModal(){
+  editingId=null;
+  document.getElementById('remModalTitle').textContent='🔔 Add Reminder';
+  document.getElementById('remForm').reset();
+  document.getElementById('remPriority').value='medium';
+  document.getElementById('remRepeat').value='none';
+  document.getElementById('remModal').classList.add('show');
+  setTimeout(()=>document.getElementById('remTitle').focus(),100);
+}
+function closeModal(){document.getElementById('remModal').classList.remove('show');editingId=null}
+
+async function quickAdd(type,title,desc,priority,daysAhead){
+  try{
+    const date=new Date();
+    date.setDate(date.getDate()+daysAhead);
+    await db.collection('health_reminders').add({
+      patientId:currentUser.uid,
+      patientEmail:currentUser.email.toLowerCase(),
+      type:type,
+      title:title,
+      description:desc,
+      dueDate:date.toISOString().split('T')[0],
+      time:null,
+      priority:priority,
+      repeat:type==='checkup'||type==='vaccination'?'yearly':'none',
+      completed:false,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast(`${title} added! 🎉`,'success');
+  }catch(e){showToast('Error: '+e.message,'error')}
+}
+
+async function saveReminder(){
+  const sb=document.getElementById('saveBtn');
+  const t=document.getElementById('remType').value;
+  const ti=document.getElementById('remTitle').value.trim();
+  const d=document.getElementById('remDate').value;
+  const p=document.getElementById('remPriority').value;
+  if(!t||!ti||!d){showToast('Please fill required fields','error');return}
+  const oh=sb.innerHTML;sb.disabled=true;sb.innerHTML='<span class="btn-spinner"></span> Saving...';
+  try{
+    const data={
+      patientId:currentUser.uid,
+      patientEmail:currentUser.email.toLowerCase(),
+      type:t,title:ti,
+      description:document.getElementById('remDesc').value.trim()||null,
+      dueDate:d,
+      time:document.getElementById('remTime').value||null,
+      priority:p,
+      repeat:document.getElementById('remRepeat').value,
+      completed:false,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if(editingId){await db.collection('health_reminders').doc(editingId).update(data);showToast('Updated','success')}
+    else{data.createdAt=firebase.firestore.FieldValue.serverTimestamp();await db.collection('health_reminders').add(data);showToast('Saved 🎉','success')}
+    closeModal();
+  }catch(e){showToast('Error: '+e.message,'error')}
+  finally{sb.disabled=false;sb.innerHTML=oh}
+}
+
+function loadReminders(){
+  db.collection('health_reminders').where('patientId','==',currentUser.uid).onSnapshot(q=>{
+    const overdue=[],upcoming=[],all=[],completed=[];
+    const today=new Date();today.setHours(0,0,0,0);
+    const next7=new Date();next7.setDate(next7.getDate()+7);next7.setHours(23,59,59,999);
+    
+    q.forEach(d=>{
+      const r={id:d.id,...d.data()};
+      if(r.completed){completed.push(r);return}
+      const due=new Date(r.dueDate);due.setHours(0,0,0,0);
+      if(due<today)overdue.push(r);
+      else if(due<=next7)upcoming.push(r);
+      all.push(r);
+    });
+    
+    overdue.sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate));
+    upcoming.sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate));
+    all.sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate));
+    completed.sort((a,b)=>(b.completedAt?.toDate()||0)-(a.completedAt?.toDate()||0));
+    
+    document.getElementById('overdue-count').textContent=overdue.length;
+    document.getElementById('upcoming-count').textContent=upcoming.length;
+    document.getElementById('active-count').textContent=all.length;
+    document.getElementById('total-count').textContent=all.length+completed.length;
+    
+    renderList('overdue-list',overdue,'overdue');
+    renderList('upcoming-list',upcoming,'upcoming');
+    renderList('all-list',all,'all');
+    renderList('completed-list',completed.slice(0,10),'completed');
+  },err=>{showToast('Could not load: '+err.message,'error')});
+}
+
+function renderList(id,list,kind){
+  const c=document.getElementById(id);
+  if(list.length===0){
+    const msgs={overdue:'No overdue reminders',upcoming:'No upcoming reminders',all:'No active reminders',completed:'No completed reminders'};
+    const emojis={overdue:'✅',upcoming:'📭',all:'🔔',completed:'📭'};
+    c.innerHTML=`<div class="empty-state"><div class="emoji">${emojis[kind]}</div><p>${msgs[kind]}</p></div>`;
+    return;
+  }
+  let html='';
+  list.forEach(r=>{
+    const icon=typeIcons[r.type]||'🔔';
+    const due=new Date(r.dueDate);
+    const today=new Date();today.setHours(0,0,0,0);
+    const days=Math.floor((due-today)/(1000*60*60*24));
+    const dateStr=due.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+    let timeStr='';
+    if(days<0)timeStr=`<span style="color:var(--danger)"><strong>${Math.abs(days)} days overdue</strong></span>`;
+    else if(days===0)timeStr=`<span style="color:var(--warning)"><strong>Today</strong></span>`;
+    else if(days===1)timeStr=`<span style="color:var(--warning)"><strong>Tomorrow</strong></span>`;
+    else timeStr=`<span><strong>In ${days} days</strong></span>`;
+    
+    const cardCls=kind==='overdue'?'overdue':kind==='upcoming'?'upcoming':kind==='completed'?'completed':'';
+    const priClass={high:'pri-high',medium:'pri-medium',low:'pri-low'}[r.priority]||'pri-medium';
+    
+    let actions='';
+    if(!r.completed){
+      actions=`<button class="icon-btn success" onclick="markDone('${escapeHtml(r.id)}')" title="Mark complete">✓</button><button class="icon-btn" onclick="editRem('${escapeHtml(r.id)}')" title="Edit">✏️</button><button class="icon-btn danger" onclick="deleteRem('${escapeHtml(r.id)}','${escapeHtml(r.title)}')" title="Delete">🗑️</button>`;
+    }else{
+      actions=`<button class="icon-btn danger" onclick="deleteRem('${escapeHtml(r.id)}','${escapeHtml(r.title)}')" title="Delete">🗑️</button>`;
+    }
+    
+    html+=`<div class="reminder-card ${cardCls}"><div class="rem-info"><div class="rem-title"><span class="rem-icon">${icon}</span>${escapeHtml(r.title)}<span class="priority-badge ${priClass}">${escapeHtml(r.priority)}</span></div><div class="rem-meta"><span>📅 ${dateStr}</span>${r.time?`<span>⏰ ${escapeHtml(r.time)}</span>`:''}${r.repeat&&r.repeat!=='none'?`<span>🔄 ${escapeHtml(r.repeat)}</span>`:''}<span>${timeStr}</span></div>${r.description?`<div class="rem-meta" style="margin-top:4px">${escapeHtml(r.description)}</div>`:''}</div><div class="rem-actions">${actions}</div></div>`;
+  });
+  c.innerHTML=html;
+}
+
+async function markDone(id){
+  try{
+    const doc=await db.collection('health_reminders').doc(id).get();
+    if(!doc.exists)return;
+    const r=doc.data();
+    await db.collection('health_reminders').doc(id).update({completed:true,completedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    showToast('Marked complete! 🎉','success');
+    
+    // Auto-create next occurrence if repeating
+    if(r.repeat&&r.repeat!=='none'){
+      const nextDate=new Date(r.dueDate);
+      const intervals={daily:1,weekly:7,monthly:30,quarterly:90,yearly:365};
+      nextDate.setDate(nextDate.getDate()+(intervals[r.repeat]||365));
+      await db.collection('health_reminders').add({
+        ...r,
+        dueDate:nextDate.toISOString().split('T')[0],
+        completed:false,
+        completedAt:null,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showToast(`Next ${r.repeat} reminder created!`,'info');
+    }
+  }catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+async function editRem(id){
+  try{
+    const doc=await db.collection('health_reminders').doc(id).get();
+    if(!doc.exists)return;
+    const r=doc.data();
+    editingId=id;
+    document.getElementById('remModalTitle').textContent='✏️ Edit Reminder';
+    document.getElementById('remType').value=r.type||'';
+    document.getElementById('remTitle').value=r.title||'';
+    document.getElementById('remDesc').value=r.description||'';
+    document.getElementById('remDate').value=r.dueDate||'';
+    document.getElementById('remTime').value=r.time||'';
+    document.getElementById('remPriority').value=r.priority||'medium';
+    document.getElementById('remRepeat').value=r.repeat||'none';
+    document.getElementById('remModal').classList.add('show');
+  }catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+async function deleteRem(id,title){
+  if(!confirm(`Delete "${title}"?`))return;
+  try{await db.collection('health_reminders').doc(id).delete();showToast('Deleted','success')}
+  catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+</script>
+</body>
+</html>

@@ -1,387 +1,755 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Patient Dashboard — HealthChain</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
-  
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Patient Dashboard — HealthChain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060a12;--surface:#0d1520;--surface2:#141f30;--border:#1a2535;--accent:#00d4ff;--accent2:#7c3aed;--text:#e8f0ff;--text-muted:#6b7a99;--success:#10b981;--danger:#ef4444;--warning:#f59e0b;--pink:#ec4899}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden}
+#global-loader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.spinner{border:4px solid rgba(0,212,255,0.1);border-top:4px solid var(--accent);border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite}
+.btn-spinner{border:2px solid rgba(255,255,255,0.3);border-top:2px solid white;border-radius:50%;width:14px;height:14px;animation:spin 0.8s linear infinite;display:inline-block}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 5%;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);text-decoration:none}
+.logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.user-profile{display:flex;align-items:center;gap:15px}
+.user-name{font-weight:600;font-size:0.95rem}
+.logout-btn{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit}
+.dashboard-container{padding:20px 4%;max-width:1200px;margin:0 auto;width:100%;flex:1;overflow-x:hidden}
+.welcome-section{margin-bottom:20px}
+.welcome-section h1{font-family:'Syne',sans-serif;font-size:2rem;margin-bottom:5px}
+.welcome-section p{color:var(--text-muted);font-size:1rem}
 
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #060a12; --surface: #0d1520; --surface2: #141f30; --border: #1a2535;
-      --accent: #00d4ff; --accent2: #7c3aed; --text: #e8f0ff; --text-muted: #6b7a99;
-      --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
-    }
-    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
-    
-    /* Loading Shield */
-    #global-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .spinner { border: 4px solid rgba(0, 212, 255, 0.1); border-top: 4px solid var(--accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.profile-banner{background:linear-gradient(135deg,rgba(0,212,255,0.1),rgba(124,58,237,0.1));border:1px solid rgba(0,212,255,0.3);border-radius:16px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.profile-banner-icon{width:46px;height:46px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+.profile-banner-content{flex:1;min-width:200px}
+.profile-banner-content h3{font-family:'Syne',sans-serif;font-size:1rem;margin-bottom:3px}
+.profile-banner-content p{color:var(--text-muted);font-size:0.82rem;line-height:1.4}
+.profile-banner-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;padding:9px 16px;border-radius:50px;font-weight:600;font-size:0.82rem;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;flex-shrink:0}
 
-    /* Navbar */
-    nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 5%; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
-    .logo { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 10px; }
-    .logo span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .user-profile { display: flex; align-items: center; gap: 15px; }
-    .user-name { font-weight: 600; font-size: 0.95rem; }
-    .logout-btn { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.3s; font-size: 0.85rem; }
-    .logout-btn:hover { background: var(--danger); color: white; }
+.emergency-quick{background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.emergency-quick .icon{font-size:1.4rem}
+.emergency-quick-text{flex:1;font-size:0.85rem;color:var(--text-muted);min-width:160px}
+.emergency-quick-text strong{color:var(--danger)}
+.emergency-btn{background:linear-gradient(135deg,var(--danger),#dc2626);color:white;border:none;padding:9px 18px;border-radius:50px;font-weight:700;font-size:0.85rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 
-    /* Dashboard Layout */
-    .dashboard-container { padding: 40px 5%; max-width: 1200px; margin: 0 auto; width: 100%; flex: 1; }
-    .welcome-section { margin-bottom: 40px; }
-    .welcome-section h1 { font-family: 'Syne', sans-serif; font-size: 2.2rem; margin-bottom: 5px; }
-    .welcome-section p { color: var(--text-muted); font-size: 1.1rem; }
+.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:12px;color:var(--text-muted)}
 
-    /* Stats Grid */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px; }
-    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 25px; display: flex; align-items: center; gap: 20px; transition: 0.3s; }
-    .stat-card:hover { transform: translateY(-5px); border-color: rgba(255,255,255,0.1); }
-    .stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
-    .icon-blue { background: rgba(59, 130, 246, 0.1); color: #3B82F6; }
-    .icon-green { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-    .icon-red { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-    .stat-info h3 { font-size: 2rem; margin-bottom: 2px; }
-    .stat-info p { color: var(--text-muted); font-size: 0.9rem; font-weight: 500; }
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:25px}
+.feature-link{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 12px;text-decoration:none;color:var(--text);text-align:center;transition:0.2s;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer}
+.feature-link:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 8px 25px rgba(0,212,255,0.1)}
+.feature-icon{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.3rem}
+.fic-blue{background:rgba(59,130,246,0.1);color:#3B82F6}
+.fic-green{background:rgba(16,185,129,0.1);color:var(--success)}
+.fic-purple{background:rgba(124,58,237,0.1);color:#a78bfa}
+.fic-orange{background:rgba(245,158,11,0.1);color:var(--warning)}
+.fic-red{background:rgba(239,68,68,0.1);color:var(--danger)}
+.fic-pink{background:rgba(236,72,153,0.1);color:var(--pink)}
+.fic-cyan{background:rgba(0,212,255,0.1);color:var(--accent)}
+.feature-title{font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700}
+.feature-desc{color:var(--text-muted);font-size:0.7rem;line-height:1.3}
 
-    /* Main Content Area */
-    .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
-    @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
-    
-    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 25px; }
-    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
-    .panel-header h2 { font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
-    
-    /* Buttons */
-    .btn { padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.3s; border: none; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; }
-    .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; }
-    .btn-primary:hover { opacity: 0.9; box-shadow: 0 5px 15px rgba(124, 58, 237, 0.3); }
-    .btn-outline { background: transparent; border: 1px solid var(--text-muted); color: var(--text); }
-    .btn-outline:hover { border-color: var(--text); }
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:25px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;align-items:center;gap:14px}
+.stat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem}
+.icon-blue{background:rgba(59,130,246,0.1);color:#3B82F6}
+.icon-green{background:rgba(16,185,129,0.1);color:var(--success)}
+.icon-red{background:rgba(239,68,68,0.1);color:var(--danger)}
+.stat-info h3{font-size:1.6rem;margin-bottom:0}
+.stat-info p{color:var(--text-muted);font-size:0.82rem;font-weight:500}
 
-    /* Add Report Form */
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.9rem; }
-    .input-field { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 15px; color: white; outline: none; font-family: inherit; }
-    .input-field:focus { border-color: var(--accent); }
-    
-    /* Reports List */
-    .report-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-    .report-card:hover { border-color: var(--accent); }
-    .report-info h4 { margin-bottom: 4px; font-size: 1.05rem; }
-    .report-meta { display: flex; gap: 15px; font-size: 0.85rem; color: var(--text-muted); }
-    .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-    .status-normal { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-    .status-abnormal { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-    
-    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
-    .empty-state i { font-size: 3rem; margin-bottom: 15px; opacity: 0.5; }
-
-    /* Doctor Access List */
-    .doctor-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface2); border-radius: 10px; margin-bottom: 10px; }
-    .doctor-info h4 { font-size: 0.95rem; margin-bottom: 2px; }
-    .doctor-info p { font-size: 0.8rem; color: var(--text-muted); }
-    .revoke-btn { color: var(--danger); background: transparent; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
-    .revoke-btn:hover { text-decoration: underline; }
-
-  </style>
+.main-grid{display:grid;grid-template-columns:2fr 1fr;gap:25px}
+@media(max-width:900px){.main-grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px}
+.panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:14px;gap:10px;flex-wrap:wrap}
+.panel-header h2{font-size:1.2rem;font-weight:700;font-family:'Syne'}
+.btn{padding:9px 18px;border-radius:10px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:7px;font-size:0.88rem;font-family:inherit}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white}
+.btn-outline{background:transparent;border:1px solid var(--text-muted);color:var(--text)}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;margin-bottom:7px;color:var(--text-muted);font-size:0.88rem}
+.input-field{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:white;outline:none;font-family:inherit;font-size:0.92rem}
+.input-field:focus{border-color:var(--accent)}
+.input-field.error{border-color:var(--danger)}
+select.input-field{appearance:none;background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;cursor:pointer}
+.file-upload-label{display:flex;align-items:center;justify-content:center;gap:10px;padding:18px;background:var(--surface2);border:2px dashed var(--border);border-radius:10px;cursor:pointer;color:var(--text-muted);font-size:0.88rem;position:relative}
+.file-upload-label:hover{border-color:var(--accent);color:var(--accent)}
+input[type="file"]{position:absolute;opacity:0;pointer-events:none}
+.file-selected{color:var(--success)!important;border-color:var(--success)!important}
+.upload-progress{width:100%;height:4px;background:var(--surface2);border-radius:2px;margin-top:8px;overflow:hidden;display:none}
+.upload-progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width 0.3s}
+.error-msg{color:var(--danger);font-size:0.78rem;margin-top:-8px;margin-bottom:10px;display:none}
+.error-msg.show{display:block}
+.report-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.report-info{flex:1;min-width:0}
+.report-info h4{margin-bottom:4px;font-size:1rem;word-break:break-word}
+.report-category{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:700;background:rgba(124,58,237,0.15);color:#a78bfa;margin-right:6px;margin-bottom:4px}
+.report-meta{display:flex;gap:14px;font-size:0.82rem;color:var(--text-muted);flex-wrap:wrap;align-items:center}
+.report-meta .hash-link{cursor:pointer;font-family:monospace}
+.report-meta .hash-link:hover{color:var(--accent)}
+.report-meta .file-link{color:var(--accent);text-decoration:none}
+.report-meta .file-link:hover{color:var(--accent2);text-decoration:underline}
+.status-badge{padding:4px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;text-transform:uppercase}
+.status-normal{background:rgba(16,185,129,0.1);color:var(--success)}
+.status-abnormal{background:rgba(239,68,68,0.1);color:var(--danger)}
+.empty-state{text-align:center;padding:35px 18px;color:var(--text-muted)}
+.doctor-item{display:flex;justify-content:space-between;align-items:center;padding:11px;background:var(--surface2);border-radius:10px;margin-bottom:9px;gap:10px}
+.revoke-btn{color:var(--danger);background:transparent;border:none;cursor:pointer;font-size:0.83rem;font-weight:600;font-family:inherit}
+.qr-panel{text-align:center;display:flex;flex-direction:column;align-items:center;border:1px solid var(--accent)}
+.qr-box{background:white;padding:14px;border-radius:14px;margin:10px 0 18px;border:4px solid var(--surface2);min-width:180px;min-height:180px;display:flex;align-items:center;justify-content:center}
+.qr-desc{color:var(--text-muted);font-size:0.82rem;line-height:1.5}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;z-index:10000;max-width:90%;min-width:280px;box-shadow:0 10px 30px rgba(0,0,0,0.5);transition:transform 0.3s;font-size:0.9rem;display:flex;align-items:center;gap:10px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.toast.success{border-color:var(--success);color:var(--success)}
+.toast.info{border-color:var(--accent);color:var(--accent)}
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:25px;max-width:500px;width:100%;max-height:85vh;overflow-y:auto}
+.hash-box{background:var(--surface2);padding:12px;border-radius:8px;font-family:monospace;font-size:0.78rem;word-break:break-all;margin:14px 0;color:var(--accent);border:1px solid var(--border)}
+.modal-close-btn{background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:10px 20px;border-radius:10px;cursor:pointer;font-weight:600;font-family:inherit;margin-top:10px}
+@media(max-width:768px){.welcome-section h1{font-size:1.6rem}.user-name{display:none}.report-card{flex-direction:column;align-items:flex-start;gap:10px}.profile-banner{flex-direction:column;text-align:center}.feature-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
 </head>
 <body>
 
-<div id="global-loader">
-  <div class="spinner"></div>
-  <p style="margin-top: 20px; color: var(--text-muted); font-weight: 600;">Verifying Identity...</p>
+<div id="global-loader"><div class="spinner"></div><p style="margin-top:20px;color:var(--text-muted);font-weight:600">Loading...</p></div>
+
+<div id="toast" class="toast"><span id="toast-icon">ℹ️</span><span id="toast-msg"></span></div>
+
+<div id="hashModal" class="modal-overlay" onclick="if(event.target===this)closeHashModal()">
+<div class="modal">
+<h3 style="font-family:'Syne';margin-bottom:14px">🔐 Record Integrity Hash</h3>
+<p style="color:var(--text-muted);font-size:0.88rem;line-height:1.6">SHA-256 cryptographic fingerprint. Tampering instantly detectable.</p>
+<div class="hash-box" id="modalHash"></div>
+<p style="color:var(--text-muted);font-size:0.78rem">📋 Tap to copy.</p>
+<button class="modal-close-btn" onclick="closeHashModal()">Close</button>
+</div>
 </div>
 
 <nav>
-  <a href="#" class="logo">Health<span>Chain</span></a>
-  <div class="user-profile">
-    <div class="user-name" id="display-name">Loading...</div>
-    <button class="logout-btn" onclick="handleLogout()">Logout</button>
-  </div>
+<a href="index.html" class="logo">Health<span>Chain</span></a>
+<div class="user-profile">
+<div class="user-name" id="display-name">Loading...</div>
+<button class="logout-btn" onclick="handleLogout()">Logout</button>
+</div>
 </nav>
 
 <div class="dashboard-container">
-  
-  <div class="welcome-section">
-    <h1>Hello, <span id="welcome-name">Patient</span></h1>
-    <p>Your medical records are secured with SHA-256 Blockchain Encryption.</p>
-  </div>
 
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-icon icon-blue">📄</div>
-      <div class="stat-info">
-        <h3 id="total-reports-count">0</h3>
-        <p>Total Reports</p>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon icon-red">⚠️</div>
-      <div class="stat-info">
-        <h3 id="abnormal-count">0</h3>
-        <p>Action Needed</p>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon icon-green">🔒</div>
-      <div class="stat-info">
-        <h3>100%</h3>
-        <p>Blockchain Secured</p>
-      </div>
-    </div>
-  </div>
+<div class="welcome-section">
+<h1>Hello, <span id="welcome-name">Patient</span></h1>
+<p>Your complete healthcare ecosystem — secured by SHA-256 blockchain.</p>
+</div>
 
-  <div class="main-grid">
-    
-    <div class="panel">
-      <div class="panel-header">
-        <h2>My Health Records</h2>
-        <button class="btn btn-primary" onclick="toggleAddReport()">+ Add New Report</button>
-      </div>
-      
-      <div id="add-report-form" style="display: none; background: var(--surface2); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px dashed var(--border);">
-        <h3 style="margin-bottom: 15px; font-size: 1.1rem;">Secure New Report</h3>
-        <div class="form-group">
-          <label>Report Name (e.g. Blood Test, MRI)</label>
-          <input type="text" id="reportName" class="input-field" placeholder="Enter report name">
-        </div>
-        <div class="form-group">
-          <label>Key Findings / Values</label>
-          <input type="text" id="reportValue" class="input-field" placeholder="e.g. Blood Sugar 140 mg/dL">
-        </div>
-        <div class="form-group">
-          <label>Status</label>
-          <select id="reportStatus" class="input-field">
-            <option value="Normal">Normal</option>
-            <option value="Abnormal">Abnormal (Attention Needed)</option>
-          </select>
-        </div>
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-          <button class="btn btn-primary" onclick="saveReport()">Secure on Blockchain</button>
-          <button class="btn btn-outline" onclick="toggleAddReport()">Cancel</button>
-        </div>
-      </div>
+<div class="profile-banner" id="profile-banner" style="display:none">
+<div class="profile-banner-icon">👤</div>
+<div class="profile-banner-content">
+<h3 id="profile-banner-title">Complete Your Health Profile</h3>
+<p id="profile-banner-desc">Add blood group, allergies, and emergency contact for better doctor care.</p>
+</div>
+<a href="profile.html" class="profile-banner-btn">Complete Now →</a>
+</div>
 
-      <div id="reports-container">
-        <div class="empty-state">
-          <div style="font-size: 3rem; margin-bottom: 10px;">📭</div>
-          <h3>No Records Found</h3>
-          <p>Click '+ Add New Report' to secure your first medical record.</p>
-        </div>
-      </div>
-    </div>
+<div class="emergency-quick">
+<div class="icon">🚨</div>
+<div class="emergency-quick-text"><strong>Emergency?</strong> Quick access to SOS, ambulance, and emergency contacts.</div>
+<a href="emergency.html" class="emergency-btn">🚨 SOS</a>
+</div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Doctor Access</h2>
-      </div>
-      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">Grant secure access to your doctor using their email ID.</p>
-      
-      <div style="display: flex; gap: 10px; margin-bottom: 25px;">
-        <input type="email" id="doctorEmail" class="input-field" placeholder="doctor@hospital.com">
-        <button class="btn btn-outline" onclick="grantAccess()">Grant</button>
-      </div>
+<div class="section-title">⚡ Quick Access</div>
+<div class="feature-grid">
 
-      <h3 style="font-size: 1rem; margin-bottom: 15px; color: var(--text-muted);">Authorized Doctors</h3>
-      <div id="authorized-doctors-list">
-        <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 10px 0;">No doctors have access currently.</p>
-      </div>
-    </div>
+<a href="profile.html" class="feature-link">
+<div class="feature-icon fic-green">👤</div>
+<div class="feature-title">Profile</div>
+<div class="feature-desc">Personal info</div>
+</a>
 
-  </div>
+<a href="family.html" class="feature-link">
+<div class="feature-icon fic-purple">👨‍👩‍👧</div>
+<div class="feature-title">Family</div>
+<div class="feature-desc">Manage members</div>
+</a>
+
+<a href="medicines.html" class="feature-link">
+<div class="feature-icon fic-orange">💊</div>
+<div class="feature-title">Medicines</div>
+<div class="feature-desc">Track & remind</div>
+</a>
+
+<a href="appointments.html" class="feature-link">
+<div class="feature-icon fic-blue">📅</div>
+<div class="feature-title">Appointments</div>
+<div class="feature-desc">Book doctors</div>
+</a>
+
+<a href="lab-tests.html" class="feature-link">
+<div class="feature-icon fic-cyan">🔬</div>
+<div class="feature-title">Lab Tests</div>
+<div class="feature-desc">Book at home</div>
+</a>
+
+<a href="hospital.html" class="feature-link">
+<div class="feature-icon fic-red">🏥</div>
+<div class="feature-title">Hospitals</div>
+<div class="feature-desc">Find nearby</div>
+</a>
+
+<a href="pharmacy.html" class="feature-link">
+<div class="feature-icon fic-green">🏪</div>
+<div class="feature-title">Pharmacy</div>
+<div class="feature-desc">Medical shops</div>
+</a>
+
+<a href="symptoms.html" class="feature-link">
+<div class="feature-icon fic-purple">🤖</div>
+<div class="feature-title">AI Symptoms</div>
+<div class="feature-desc">Check with AI</div>
+</a>
+
+<a href="vault.html" class="feature-link">
+<div class="feature-icon fic-blue">🔐</div>
+<div class="feature-title">Health Vault</div>
+<div class="feature-desc">Insurance & vaccines</div>
+</a>
+
+<a href="reminders.html" class="feature-link">
+<div class="feature-icon fic-orange">🔔</div>
+<div class="feature-title">Reminders</div>
+<div class="feature-desc">Health alerts</div>
+</a>
+
+<a href="period-tracker.html" class="feature-link">
+<div class="feature-icon fic-pink">🌸</div>
+<div class="feature-title">Period</div>
+<div class="feature-desc">Cycle tracker</div>
+</a>
+
+<a href="child-vaccine.html" class="feature-link">
+<div class="feature-icon fic-cyan">👶</div>
+<div class="feature-title">Child Vaccines</div>
+<div class="feature-desc">IAP schedule</div>
+</a>
+
+</div>
+
+<div class="stats-grid">
+<div class="stat-card"><div class="stat-icon icon-blue">📄</div><div class="stat-info"><h3 id="total-reports-count">0</h3><p>Total Reports</p></div></div>
+<div class="stat-card"><div class="stat-icon icon-red">⚠️</div><div class="stat-info"><h3 id="abnormal-count">0</h3><p>Action Needed</p></div></div>
+<div class="stat-card"><div class="stat-icon icon-green">🔒</div><div class="stat-info"><h3 id="hashed-count">0</h3><p>Hash Secured</p></div></div>
+</div>
+
+<div class="main-grid">
+
+<div class="panel">
+<div class="panel-header">
+<h2>My Health Records</h2>
+<button class="btn btn-primary" onclick="toggleAddReport()">+ Add Report</button>
+</div>
+
+<div id="add-report-form" style="display:none;background:var(--surface2);padding:18px;border-radius:12px;margin-bottom:22px;border:1px dashed var(--border)">
+<h3 style="margin-bottom:14px;font-size:1.05rem">Secure New Report</h3>
+<form id="reportForm" onsubmit="event.preventDefault();saveReport()" novalidate>
+
+<div class="form-group">
+<label for="reportCategory">Category</label>
+<select id="reportCategory" class="input-field">
+<option value="Blood Test">🩸 Blood Test</option>
+<option value="X-Ray">🦴 X-Ray</option>
+<option value="MRI">🧠 MRI Scan</option>
+<option value="CT Scan">📡 CT Scan</option>
+<option value="Ultrasound">📊 Ultrasound</option>
+<option value="Prescription">💊 Prescription</option>
+<option value="Discharge Summary">📋 Discharge Summary</option>
+<option value="Vaccination">💉 Vaccination</option>
+<option value="Surgery Report">🏥 Surgery Report</option>
+<option value="Dental">🦷 Dental</option>
+<option value="Eye Report">👁️ Eye Report</option>
+<option value="ECG">❤️ ECG/Heart</option>
+<option value="Consultation">🩺 Doctor Consultation</option>
+<option value="Lab Test">🔬 Lab Test (Other)</option>
+<option value="Other">📄 Other</option>
+</select>
+</div>
+
+<div class="form-group">
+<label for="reportName">Report Name / Title</label>
+<input type="text" id="reportName" class="input-field" placeholder="e.g. Complete Blood Count" maxlength="100" required>
+</div>
+<div class="error-msg" id="reportName-error"></div>
+
+<div class="form-group">
+<label for="reportValue">Key Findings / Values</label>
+<input type="text" id="reportValue" class="input-field" placeholder="e.g. Hemoglobin 12.5 g/dL" maxlength="500" required>
+</div>
+<div class="error-msg" id="reportValue-error"></div>
+
+<div class="form-group">
+<label for="reportStatus">Status</label>
+<select id="reportStatus" class="input-field">
+<option value="Normal">✅ Normal</option>
+<option value="Abnormal">⚠️ Abnormal (Attention Needed)</option>
+</select>
+</div>
+
+<div class="form-group">
+<label>Report File (Optional — PDF/Image)</label>
+<label class="file-upload-label" id="fileLabel">
+<span id="fileLabelText">📎 Click to attach file (optional)</span>
+<input type="file" id="reportFile" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(event)">
+</label>
+<div class="upload-progress" id="uploadProgress"><div class="upload-progress-bar" id="uploadProgressBar"></div></div>
+<p style="font-size:0.74rem;color:var(--text-muted);margin-top:6px">Max 5MB. Stored securely on Cloudinary.</p>
+</div>
+
+<div style="display:flex;gap:10px;margin-top:18px">
+<button class="btn btn-primary" id="saveReportBtn" type="submit">🔐 Secure Record</button>
+<button class="btn btn-outline" type="button" onclick="toggleAddReport()">Cancel</button>
+</div>
+
+</form>
+</div>
+
+<div id="reports-container">
+<div class="empty-state">
+<div style="font-size:3rem;margin-bottom:10px">📭</div>
+<h3>No Records Found</h3>
+<p>Click '+ Add Report' to secure your first medical record.</p>
+</div>
+</div>
+</div>
+
+<div>
+
+<div class="panel qr-panel" style="margin-bottom:25px">
+<h2 style="font-family:'Syne';font-size:1.15rem;margin-bottom:8px">My Health Identity</h2>
+<div class="qr-box" id="qrcode"><div class="spinner" style="width:30px;height:30px;border-width:3px"></div></div>
+<p class="qr-desc">Show this QR Code to your doctor for instant secure access.</p>
+</div>
+
+<div class="panel">
+<div class="panel-header" style="margin-bottom:14px;padding-bottom:10px"><h2>Doctor Access</h2></div>
+<p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:14px">Grant secure access using doctor's email.</p>
+<form onsubmit="event.preventDefault();grantAccess()" style="display:flex;gap:10px;margin-bottom:22px">
+<input type="email" id="doctorEmail" class="input-field" placeholder="doctor@hospital.com" autocomplete="off">
+<button class="btn btn-outline" id="grantBtn" type="submit">Grant</button>
+</form>
+<h3 style="font-size:0.95rem;margin-bottom:14px;color:var(--text-muted)">Authorized Doctors</h3>
+<div id="authorized-doctors-list">
+<p style="font-size:0.83rem;color:var(--text-muted);text-align:center;padding:10px 0">No doctors have access currently.</p>
+</div>
+</div>
+
+</div>
+</div>
+
 </div>
 
 <script>
-  // 1. Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",
-    authDomain: "helthchain.firebaseapp.com",
-    projectId: "helthchain",
-    storageBucket: "helthchain.appspot.com",
-    messagingSenderId: "682542534348",
-    appId: "1:682542534348:web:bedb3583d7d2eb49a57c69"
-  };
+const firebaseConfig={apiKey:"AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",authDomain:"helthchain.firebaseapp.com",projectId:"helthchain",storageBucket:"helthchain.appspot.com",messagingSenderId:"682542534348",appId:"1:682542534348:web:bedb3583d7d2eb49a57c69"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+const CLOUDINARY_CLOUD_NAME='dwxqo28l9';
+const CLOUDINARY_UPLOAD_PRESET='healthchain_unsigned';
 
-  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
+let currentUser=null;
+let selectedFile=null;
 
-  let currentUser = null;
+const toast=document.getElementById('toast');
+const toastMsg=document.getElementById('toast-msg');
+const toastIcon=document.getElementById('toast-icon');
+let toastTimeout=null;
 
-  // 2. Auth Check (The Shield)
-  auth.onAuthStateChanged((user) => {
-    if (user) {
-      // Check if user is actually a patient
-      db.collection("users").doc(user.uid).get().then((doc) => {
-        if(doc.exists && doc.data().role === 'patient') {
-          currentUser = user;
-          document.getElementById('global-loader').style.display = 'none';
-          document.getElementById('display-name').textContent = user.displayName || user.email.split('@')[0];
-          document.getElementById('welcome-name').textContent = user.displayName || user.email.split('@')[0];
-          loadReports();
-          loadDoctors();
-        } else {
-          alert("Unauthorized Access. You are not registered as a Patient.");
-          auth.signOut().then(() => window.location.replace('login.html'));
-        }
-      });
-    } else {
-      window.location.replace('login.html');
-    }
-  });
+function showToast(m,t='info'){
+  clearTimeout(toastTimeout);
+  toastMsg.textContent=m;
+  toastIcon.textContent=t==='error'?'⚠️':t==='success'?'✅':'ℹ️';
+  toast.className=`toast ${t} show`;
+  toastTimeout=setTimeout(()=>{toast.classList.remove('show')},4000);
+}
 
-  // Logout
-  function handleLogout() {
-    auth.signOut().then(() => {
-      window.location.replace('login.html');
+function escapeHtml(s){
+  if(s==null)return'';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+async function generateRealHash(d){
+  const e=new TextEncoder();
+  const b=e.encode(d);
+  const h=await crypto.subtle.digest('SHA-256',b);
+  const a=Array.from(new Uint8Array(h));
+  return'0x'+a.map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+async function hashFile(f){
+  const a=await f.arrayBuffer();
+  const h=await crypto.subtle.digest('SHA-256',a);
+  const r=Array.from(new Uint8Array(h));
+  return r.map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+async function uploadToCloudinary(f,onProgress){
+  return new Promise((resolve,reject)=>{
+    const fd=new FormData();
+    fd.append('file',f);
+    fd.append('upload_preset',CLOUDINARY_UPLOAD_PRESET);
+    const xhr=new XMLHttpRequest();
+    xhr.open('POST',`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`);
+    xhr.upload.addEventListener('progress',e=>{
+      if(e.lengthComputable&&onProgress)onProgress((e.loaded/e.total)*100);
     });
+    xhr.onload=()=>{
+      if(xhr.status===200){
+        const d=JSON.parse(xhr.responseText);
+        resolve({url:d.secure_url,publicId:d.public_id,format:d.format});
+      }else reject(new Error('Upload failed: '+xhr.responseText));
+    };
+    xhr.onerror=()=>reject(new Error('Network error'));
+    xhr.send(fd);
+  });
+}
+
+auth.onAuthStateChanged(async u=>{
+  if(u){
+    currentUser=u;
+    const n=u.displayName||(u.email?u.email.split('@')[0]:'Patient');
+    document.getElementById('display-name').textContent=n;
+    document.getElementById('welcome-name').textContent=n;
+    document.getElementById('global-loader').style.display='none';
+    await checkProfile();
+    await generateHealthIdentityQR(u);
+    loadReports();
+    loadDoctors();
+  }else{
+    window.location.replace('login.html');
   }
+});
 
-  // Toggle Form
-  function toggleAddReport() {
-    const form = document.getElementById('add-report-form');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
-  }
-
-  // Basic Hash Generator (For UI Demo purposes)
-  function generateHash() {
-    return '0x' + Array.from({length: 40}, () => Math.floor(Math.random() * 16).toString(16)).join('');
-  }
-
-  // Save Report to Firestore
-  function saveReport() {
-    const name = document.getElementById('reportName').value;
-    const value = document.getElementById('reportValue').value;
-    const status = document.getElementById('reportStatus').value;
-
-    if(!name || !value) return alert("Please fill all fields!");
-
-    const hash = generateHash();
-
-    db.collection("reports").add({
-      patientId: currentUser.uid,
-      patientEmail: currentUser.email,
-      reportName: name,
-      findings: value,
-      status: status,
-      blockchainHash: hash,
-      date: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-      alert("Report Secured on Blockchain! 🔗");
-      document.getElementById('reportName').value = '';
-      document.getElementById('reportValue').value = '';
-      toggleAddReport();
-      loadReports();
-    }).catch(err => alert("Error: " + err.message));
-  }
-
-  // Load Reports
-  function loadReports() {
-    db.collection("reports").where("patientId", "==", currentUser.uid).orderBy("date", "desc")
-      .onSnapshot((querySnapshot) => {
-        const container = document.getElementById('reports-container');
-        
-        document.getElementById('total-reports-count').textContent = querySnapshot.size;
-        
-        let abnormalCount = 0;
-        
-        if (querySnapshot.empty) {
-          container.innerHTML = `
-            <div class="empty-state">
-              <div style="font-size: 3rem; margin-bottom: 10px;">📭</div>
-              <h3>No Records Found</h3>
-              <p>Click '+ Add New Report' to secure your first medical record.</p>
-            </div>`;
-          document.getElementById('abnormal-count').textContent = 0;
-          return;
-        }
-
-        let html = '';
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          const dateStr = data.date ? data.date.toDate().toLocaleDateString() : 'Just now';
-          const isAbnormal = data.status === 'Abnormal';
-          if(isAbnormal) abnormalCount++;
-
-          html += `
-            <div class="report-card">
-              <div class="report-info">
-                <h4>${data.reportName}</h4>
-                <div class="report-meta">
-                  <span>📅 ${dateStr}</span>
-                  <span>🔗 Hash: ${data.blockchainHash.substring(0,10)}...</span>
-                </div>
-                <p style="margin-top: 8px; font-size: 0.9rem; color: var(--text);">${data.findings}</p>
-              </div>
-              <div style="text-align: right;">
-                <span class="status-badge ${isAbnormal ? 'status-abnormal' : 'status-normal'}">${data.status}</span>
-              </div>
-            </div>
-          `;
-        });
-        container.innerHTML = html;
-        document.getElementById('abnormal-count').textContent = abnormalCount;
-      });
-  }
-
-  // Grant Doctor Access
-  function grantAccess() {
-    const email = document.getElementById('doctorEmail').value.trim();
-    if(!email) return alert("Enter doctor's email");
-
-    db.collection("doctor_access").add({
-      patientId: currentUser.uid,
-      doctorEmail: email.toLowerCase(),
-      grantedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-      alert(`Access granted to ${email}`);
-      document.getElementById('doctorEmail').value = '';
-      loadDoctors();
-    }).catch(err => alert(err.message));
-  }
-
-  // Load Granted Doctors
-  function loadDoctors() {
-    db.collection("doctor_access").where("patientId", "==", currentUser.uid)
-      .onSnapshot((querySnapshot) => {
-        const list = document.getElementById('authorized-doctors-list');
-        if(querySnapshot.empty) {
-          list.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 10px 0;">No doctors have access currently.</p>`;
-          return;
-        }
-
-        let html = '';
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          html += `
-            <div class="doctor-item">
-              <div class="doctor-info">
-                <h4>👨‍⚕️ Doctor</h4>
-                <p>${data.doctorEmail}</p>
-              </div>
-              <button class="revoke-btn" onclick="revokeAccess('${doc.id}')">Revoke</button>
-            </div>
-          `;
-        });
-        list.innerHTML = html;
-      });
-  }
-
-  // Revoke Access
-  function revokeAccess(docId) {
-    if(confirm("Are you sure you want to revoke access? This doctor will no longer see your reports.")) {
-      db.collection("doctor_access").doc(docId).delete().then(() => {
-        alert("Access Revoked Successfully.");
-      });
+async function checkProfile(){
+  try{
+    const doc=await db.collection('users').doc(currentUser.uid).get();
+    const banner=document.getElementById('profile-banner');
+    if(!doc.exists||!doc.data().profileComplete){
+      banner.style.display='flex';
+      document.getElementById('profile-banner-title').textContent='Complete Your Health Profile';
+      document.getElementById('profile-banner-desc').textContent='Add blood group, allergies, and emergency contact for better doctor care.';
+    }else{
+      const data=doc.data();
+      const missing=[];
+      if(!data.bloodGroup||data.bloodGroup==='Unknown')missing.push('blood group');
+      if(!data.emergencyPhone)missing.push('emergency contact');
+      if(missing.length>0){
+        banner.style.display='flex';
+        document.getElementById('profile-banner-title').textContent='Profile Incomplete';
+        document.getElementById('profile-banner-desc').textContent=`Add your ${missing.join(' and ')} for better care.`;
+      }
     }
+  }catch(err){console.error('Profile check error:',err)}
+}
+
+async function generateHealthIdentityQR(u){
+  try{
+    const d=JSON.stringify({v:1,id:u.uid,email:u.email.toLowerCase(),platform:'healthchain'});
+    const c=document.getElementById("qrcode");
+    c.innerHTML="";
+    new QRCode(c,{
+      text:d,
+      width:160,
+      height:160,
+      colorDark:"#000000",
+      colorLight:"#ffffff",
+      correctLevel:QRCode.CorrectLevel.M
+    });
+  }catch(e){
+    document.getElementById("qrcode").innerHTML='<p style="color:#000;font-size:0.8rem;padding:20px">QR failed</p>';
   }
+}
+
+function handleLogout(){
+  if(confirm("Are you sure you want to logout?")){
+    auth.signOut().then(()=>window.location.replace('login.html'));
+  }
+}
+
+function toggleAddReport(){
+  const f=document.getElementById('add-report-form');
+  const h=f.style.display==='none';
+  f.style.display=h?'block':'none';
+  if(h)setTimeout(()=>document.getElementById('reportName').focus(),100);
+}
+
+function handleFileSelect(e){
+  const f=e.target.files[0];
+  const l=document.getElementById('fileLabel');
+  const lt=document.getElementById('fileLabelText');
+  if(!f){
+    selectedFile=null;
+    lt.textContent='📎 Click to attach file (optional)';
+    l.classList.remove('file-selected');
+    return;
+  }
+  if(f.size>5*1024*1024){
+    showToast('File too large. Max 5MB allowed.','error');
+    e.target.value='';
+    return;
+  }
+  selectedFile=f;
+  lt.textContent=`✅ ${f.name} (${(f.size/1024).toFixed(1)} KB)`;
+  l.classList.add('file-selected');
+}
+
+async function saveReport(){
+  const ni=document.getElementById('reportName');
+  const vi=document.getElementById('reportValue');
+  const ss=document.getElementById('reportStatus');
+  const ci=document.getElementById('reportCategory');
+  const sb=document.getElementById('saveReportBtn');
+  const ne=document.getElementById('reportName-error');
+  const ve=document.getElementById('reportValue-error');
+  const pb=document.getElementById('uploadProgress');
+  const pbi=document.getElementById('uploadProgressBar');
+  
+  ne.classList.remove('show');
+  ve.classList.remove('show');
+  ni.classList.remove('error');
+  vi.classList.remove('error');
+  
+  const n=ni.value.trim();
+  const v=vi.value.trim();
+  const s=ss.value;
+  const cat=ci.value;
+  
+  if(!n){
+    ni.classList.add('error');
+    ne.textContent='Report name is required';
+    ne.classList.add('show');
+    ni.focus();
+    return;
+  }
+  if(!v){
+    vi.classList.add('error');
+    ve.textContent='Findings are required';
+    ve.classList.add('show');
+    vi.focus();
+    return;
+  }
+  
+  const oh=sb.innerHTML;
+  sb.disabled=true;
+  sb.innerHTML='<span class="btn-spinner"></span> Computing hash...';
+  
+  try{
+    const t=Date.now();
+    const hi=JSON.stringify({patient:currentUser.email.toLowerCase(),reportName:n,findings:v,status:s,category:cat,createdAt:t});
+    const rh=await generateRealHash(hi);
+    
+    let fh=null,fn=null,fu=null,fp=null,ff=null;
+    
+    if(selectedFile){
+      sb.innerHTML='<span class="btn-spinner"></span> Hashing file...';
+      fh=await hashFile(selectedFile);
+      fn=selectedFile.name;
+      sb.innerHTML='<span class="btn-spinner"></span> Uploading...';
+      pb.style.display='block';
+      const r=await uploadToCloudinary(selectedFile,p=>{
+        pbi.style.width=p+'%';
+        sb.innerHTML=`<span class="btn-spinner"></span> Uploading ${Math.round(p)}%`;
+      });
+      fu=r.url;
+      fp=r.publicId;
+      ff=r.format;
+    }
+    
+    sb.innerHTML='<span class="btn-spinner"></span> Saving...';
+    
+    await db.collection("reports").add({
+      patientId:currentUser.uid,
+      patientEmail:currentUser.email.toLowerCase(),
+      reportName:n,
+      findings:v,
+      status:s,
+      category:cat,
+      recordHash:rh,
+      fileHash:fh,
+      fileName:fn,
+      fileUrl:fu,
+      filePublicId:fp,
+      fileFormat:ff,
+      hashAlgorithm:'SHA-256',
+      createdAt:t,
+      date:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    showToast('Record secured with SHA-256 hash! 🔐','success');
+    
+    ni.value='';
+    vi.value='';
+    ss.value='Normal';
+    ci.value='Blood Test';
+    document.getElementById('reportFile').value='';
+    selectedFile=null;
+    document.getElementById('fileLabelText').textContent='📎 Click to attach file (optional)';
+    document.getElementById('fileLabel').classList.remove('file-selected');
+    pb.style.display='none';
+    pbi.style.width='0%';
+    toggleAddReport();
+    
+  }catch(e){
+    console.error('Save error:',e);
+    showToast('Error: '+(e.message||'Unknown error'),'error');
+    pb.style.display='none';
+  }finally{
+    sb.disabled=false;
+    sb.innerHTML=oh;
+  }
+}
+
+function loadReports(){
+  db.collection("reports")
+    .where("patientEmail","==",currentUser.email.toLowerCase())
+    .orderBy("date","desc")
+    .onSnapshot(q=>{
+      const c=document.getElementById('reports-container');
+      document.getElementById('total-reports-count').textContent=q.size;
+      document.getElementById('hashed-count').textContent=q.size;
+      let ac=0;
+      
+      if(q.empty){
+        c.innerHTML=`<div class="empty-state"><div style="font-size:3rem;margin-bottom:10px">📭</div><h3>No Records Found</h3><p>Click '+ Add Report' to secure your first medical record.</p></div>`;
+        document.getElementById('abnormal-count').textContent=0;
+        return;
+      }
+      
+      let h='';
+      q.forEach(d=>{
+        const dt=d.data();
+        const ds=dt.date?dt.date.toDate().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'Just now';
+        const ia=dt.status==='Abnormal';
+        if(ia)ac++;
+        const hs=dt.recordHash||dt.blockchainHash||'N/A';
+        const sh=hs.substring(0,14);
+        const sn=escapeHtml(dt.reportName||'Untitled');
+        const sf=escapeHtml(dt.findings||'');
+        const st=escapeHtml(dt.status||'Normal');
+        const cat=dt.category?escapeHtml(dt.category):null;
+        const fn=dt.fileName?escapeHtml(dt.fileName):null;
+        const fu=dt.fileUrl?escapeHtml(dt.fileUrl):null;
+        const fd=fu?`<a href="${fu}" target="_blank" rel="noopener" class="file-link">📎 ${fn||'View File'}</a>`:(fn?`<span>📎 ${fn}</span>`:'');
+        const catBadge=cat?`<span class="report-category">${cat}</span>`:'';
+        
+        h+=`<div class="report-card"><div class="report-info"><div>${catBadge}</div><h4>${sn}</h4><div class="report-meta"><span>📅 ${ds}</span><span class="hash-link" onclick="showHashModal('${escapeHtml(hs)}')">🔗 ${escapeHtml(sh)}...</span>${fd}</div><p style="margin-top:8px;font-size:0.9rem;color:var(--text)">${sf}</p></div><div style="text-align:right"><span class="status-badge ${ia?'status-abnormal':'status-normal'}">${st}</span></div></div>`;
+      });
+      
+      c.innerHTML=h;
+      document.getElementById('abnormal-count').textContent=ac;
+    },e=>{
+      document.getElementById('reports-container').innerHTML=`<div class="empty-state"><div style="font-size:3rem;margin-bottom:10px">⚠️</div><h3>Could not load</h3><p>${escapeHtml(e.message||'Please check connection.')}</p></div>`;
+      showToast('Failed to load','error');
+    });
+}
+
+function showHashModal(h){
+  document.getElementById('modalHash').textContent=h;
+  document.getElementById('hashModal').classList.add('show');
+  document.getElementById('modalHash').onclick=()=>{
+    navigator.clipboard.writeText(h).then(()=>showToast('Hash copied','success')).catch(()=>showToast('Long-press to select','info'));
+  };
+}
+
+function closeHashModal(){
+  document.getElementById('hashModal').classList.remove('show');
+}
+
+function validateEmail(e){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+}
+
+async function grantAccess(){
+  const ei=document.getElementById('doctorEmail');
+  const gb=document.getElementById('grantBtn');
+  const e=ei.value.trim().toLowerCase();
+  
+  if(!e){showToast("Please enter doctor's email",'error');ei.focus();return}
+  if(!validateEmail(e)){showToast('Please enter a valid email','error');ei.focus();return}
+  if(e===currentUser.email.toLowerCase()){showToast("You can't grant access to yourself",'error');return}
+  
+  const ot=gb.textContent;
+  gb.disabled=true;
+  gb.textContent='Granting...';
+  
+  try{
+    const ex=await db.collection("doctor_access")
+      .where("patientId","==",currentUser.uid)
+      .where("doctorEmail","==",e)
+      .get();
+    
+    if(!ex.empty){
+      showToast(`${e} already has access`,'info');
+      gb.disabled=false;
+      gb.textContent=ot;
+      return;
+    }
+    
+    await db.collection("doctor_access").add({
+      patientId:currentUser.uid,
+      patientEmail:currentUser.email.toLowerCase(),
+      doctorEmail:e,
+      grantedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    showToast(`Access granted to ${e}`,'success');
+    ei.value='';
+  }catch(err){
+    showToast('Failed: '+(err.message||'Unknown error'),'error');
+  }finally{
+    gb.disabled=false;
+    gb.textContent=ot;
+  }
+}
+
+function loadDoctors(){
+  db.collection("doctor_access")
+    .where("patientId","==",currentUser.uid)
+    .onSnapshot(q=>{
+      const l=document.getElementById('authorized-doctors-list');
+      if(q.empty){
+        l.innerHTML=`<p style="font-size:0.83rem;color:var(--text-muted);text-align:center;padding:10px 0">No doctors have access currently.</p>`;
+        return;
+      }
+      let h='';
+      q.forEach(d=>{
+        const dt=d.data();
+        const se=escapeHtml(dt.doctorEmail||'');
+        h+=`<div class="doctor-item"><div><h4 style="font-size:0.95rem">👨‍⚕️ Doctor</h4><p style="font-size:0.8rem;color:var(--text-muted);word-break:break-all">${se}</p></div><button class="revoke-btn" onclick="revokeAccess('${escapeHtml(d.id)}','${se}')">Revoke</button></div>`;
+      });
+      l.innerHTML=h;
+    },()=>{
+      document.getElementById('authorized-doctors-list').innerHTML=`<p style="font-size:0.83rem;color:var(--danger);text-align:center">Could not load.</p>`;
+    });
+}
+
+function revokeAccess(i,e){
+  if(!confirm(`Revoke access for ${e}?`))return;
+  db.collection("doctor_access").doc(i).delete()
+    .then(()=>showToast(`Access revoked from ${e}`,'success'))
+    .catch(e=>showToast('Failed: '+e.message,'error'));
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')closeHashModal();
+});
 </script>
+
 </body>
 </html>

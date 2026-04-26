@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Medicine Tracker — HealthChain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060a12;--surface:#0d1520;--surface2:#141f30;--border:#1a2535;--accent:#00d4ff;--accent2:#7c3aed;--text:#e8f0ff;--text-muted:#6b7a99;--success:#10b981;--danger:#ef4444;--warning:#f59e0b}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+#global-loader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.spinner{border:4px solid rgba(0,212,255,0.1);border-top:4px solid var(--accent);border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite}
+.btn-spinner{border:2px solid rgba(255,255,255,0.3);border-top:2px solid white;border-radius:50%;width:14px;height:14px;animation:spin 0.8s linear infinite;display:inline-block}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 5%;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);text-decoration:none}
+.logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.back-btn{background:transparent;color:var(--text-muted);text-decoration:none;font-size:0.9rem;padding:8px 14px;border:1px solid var(--border);border-radius:8px}
+.container{max-width:1000px;margin:0 auto;padding:30px 20px;width:100%;flex:1}
+.header{margin-bottom:25px}
+.header h1{font-family:'Syne',sans-serif;font-size:2rem;margin-bottom:6px}
+.header h1 span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--text-muted);font-size:0.95rem}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:25px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;align-items:center;gap:14px}
+.stat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.icon-blue{background:rgba(59,130,246,0.1);color:#3B82F6}
+.icon-green{background:rgba(16,185,129,0.1);color:var(--success)}
+.icon-orange{background:rgba(245,158,11,0.1);color:var(--warning)}
+.stat-info h3{font-size:1.6rem;margin-bottom:2px}
+.stat-info p{color:var(--text-muted);font-size:0.82rem;font-weight:500}
+.add-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;padding:13px 26px;border-radius:50px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;display:inline-flex;align-items:center;gap:8px;margin-bottom:25px}
+.add-btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,212,255,0.3)}
+.section-title{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:16px}
+.medicines-list{display:grid;gap:14px;margin-bottom:35px}
+.medicine-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.medicine-card:hover{border-color:var(--accent)}
+.medicine-info{flex:1;min-width:0}
+.medicine-name{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.medicine-pill{display:inline-flex;width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:50%;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0}
+.medicine-meta{font-size:0.82rem;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.medicine-meta span{display:inline-flex;align-items:center;gap:4px}
+.timing-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.timing-chip{background:rgba(0,212,255,0.1);color:var(--accent);padding:3px 10px;border-radius:50px;font-size:0.75rem;font-weight:600;border:1px solid rgba(0,212,255,0.2)}
+.medicine-actions{display:flex;gap:6px;flex-shrink:0}
+.icon-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:0.82rem;font-family:inherit}
+.icon-btn:hover{color:var(--text)}
+.icon-btn.danger:hover{color:var(--danger);border-color:var(--danger)}
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-muted);background:var(--surface);border-radius:14px;border:1px solid var(--border)}
+.empty-state .emoji{font-size:3rem;margin-bottom:10px}
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:25px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-family:'Syne',sans-serif;margin-bottom:18px;font-size:1.25rem}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;margin-bottom:6px;color:var(--text-muted);font-size:0.85rem}
+.input-field{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:white;outline:none;font-family:inherit;font-size:0.9rem}
+.input-field:focus{border-color:var(--accent)}
+select.input-field{appearance:none;background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;cursor:pointer}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.timing-options{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.timing-option{padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:50px;cursor:pointer;font-size:0.85rem;transition:0.2s;color:var(--text)}
+.timing-option:hover{border-color:var(--accent)}
+.timing-option.active{background:rgba(0,212,255,0.1);border-color:var(--accent);color:var(--accent)}
+.modal-actions{display:flex;gap:10px;margin-top:20px}
+.btn{padding:11px 20px;border-radius:50px;font-weight:600;cursor:pointer;border:none;font-size:0.9rem;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;flex:1}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-muted)}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;z-index:10002;max-width:90%;min-width:280px;transition:transform 0.3s;font-size:0.9rem;display:flex;align-items:center;gap:10px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.toast.success{border-color:var(--success);color:var(--success)}
+.toast.info{border-color:var(--accent);color:var(--accent)}
+.info-banner{background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:12px 14px;font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:20px}
+.info-banner strong{color:var(--warning)}
+.today-schedule{background:linear-gradient(135deg,rgba(0,212,255,0.05),rgba(124,58,237,0.05));border:1px solid rgba(0,212,255,0.2);border-radius:14px;padding:18px;margin-bottom:25px}
+.schedule-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.schedule-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)}
+.schedule-time{font-family:'Syne',sans-serif;font-weight:700;color:var(--accent);font-size:0.95rem}
+.schedule-meds{font-size:0.85rem;color:var(--text-muted);text-align:right}
+@media(max-width:600px){.medicine-card{flex-direction:column;align-items:flex-start}.medicine-actions{width:100%;justify-content:flex-end}.form-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="global-loader"><div class="spinner"></div><p style="margin-top:20px;color:var(--text-muted)">Loading...</p></div>
+<div id="toast" class="toast"><span id="toast-icon">ℹ️</span><span id="toast-msg"></span></div>
+
+<div id="addModal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+<h3 id="modalTitle">💊 Add Medicine</h3>
+<form id="medForm" onsubmit="event.preventDefault();saveMedicine()">
+<input type="hidden" id="medId">
+<div class="form-group">
+<label>Medicine Name *</label>
+<input type="text" id="medName" class="input-field" placeholder="e.g. Paracetamol" maxlength="100" required>
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>Dosage *</label>
+<input type="text" id="medDosage" class="input-field" placeholder="e.g. 500mg, 1 tablet" maxlength="50" required>
+</div>
+<div class="form-group">
+<label>Type</label>
+<select id="medType" class="input-field">
+<option value="Tablet">💊 Tablet</option>
+<option value="Capsule">💊 Capsule</option>
+<option value="Syrup">🥤 Syrup</option>
+<option value="Injection">💉 Injection</option>
+<option value="Drops">💧 Drops</option>
+<option value="Inhaler">🫁 Inhaler</option>
+<option value="Cream">🧴 Cream/Ointment</option>
+<option value="Other">📦 Other</option>
+</select>
+</div>
+</div>
+<div class="form-group">
+<label>Frequency *</label>
+<select id="medFreq" class="input-field" required onchange="updateTimingOptions()">
+<option value="">Select frequency</option>
+<option value="Once daily">Once daily (1x)</option>
+<option value="Twice daily">Twice daily (2x)</option>
+<option value="Thrice daily">Thrice daily (3x)</option>
+<option value="Four times daily">Four times daily (4x)</option>
+<option value="Every 4 hours">Every 4 hours</option>
+<option value="Every 6 hours">Every 6 hours</option>
+<option value="Every 8 hours">Every 8 hours</option>
+<option value="As needed">As needed (PRN)</option>
+<option value="Weekly">Weekly</option>
+</select>
+</div>
+<div class="form-group">
+<label>Timings</label>
+<div class="timing-options" id="timingOptions">
+<div class="timing-option" data-time="Morning" onclick="toggleTiming(this)">🌅 Morning</div>
+<div class="timing-option" data-time="Afternoon" onclick="toggleTiming(this)">☀️ Afternoon</div>
+<div class="timing-option" data-time="Evening" onclick="toggleTiming(this)">🌆 Evening</div>
+<div class="timing-option" data-time="Night" onclick="toggleTiming(this)">🌙 Night</div>
+<div class="timing-option" data-time="Before meal" onclick="toggleTiming(this)">🍽️ Before meal</div>
+<div class="timing-option" data-time="After meal" onclick="toggleTiming(this)">🍽️ After meal</div>
+</div>
+</div>
+<div class="form-group">
+<label>Custom Reminder Time</label>
+<input type="time" id="medReminder" class="input-field">
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>Start Date</label>
+<input type="date" id="medStart" class="input-field">
+</div>
+<div class="form-group">
+<label>End Date (optional)</label>
+<input type="date" id="medEnd" class="input-field">
+</div>
+</div>
+<div class="form-group">
+<label>Notes / Instructions</label>
+<input type="text" id="medNotes" class="input-field" placeholder="e.g. With water, avoid milk" maxlength="200">
+</div>
+<div class="modal-actions">
+<button type="submit" class="btn btn-primary" id="saveBtn">💾 Save Medicine</button>
+<button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<nav>
+<a href="index.html" class="logo">Health<span>Chain</span></a>
+<a href="patient.html" class="back-btn">← Back</a>
+</nav>
+
+<div class="container">
+<div class="header">
+<h1>💊 <span>Medicine Tracker</span></h1>
+<p>Track your daily medicines and never miss a dose.</p>
+</div>
+
+<div class="info-banner">
+<strong>⏰ Reminders:</strong> Browser notifications work when this tab is open. For full reminders, install HealthChain on your phone (PWA support coming soon).
+</div>
+
+<div class="stats-row">
+<div class="stat-card"><div class="stat-icon icon-blue">💊</div><div class="stat-info"><h3 id="total-meds">0</h3><p>Active Medicines</p></div></div>
+<div class="stat-card"><div class="stat-icon icon-orange">⏰</div><div class="stat-info"><h3 id="today-doses">0</h3><p>Today's Doses</p></div></div>
+<div class="stat-card"><div class="stat-icon icon-green">✅</div><div class="stat-info"><h3 id="adherence">100%</h3><p>Adherence Rate</p></div></div>
+</div>
+
+<div class="today-schedule" id="schedule-area" style="display:none">
+<div class="section-title">📅 Today's Schedule</div>
+<div class="schedule-list" id="schedule-list"></div>
+</div>
+
+<button class="add-btn" onclick="openModal()">+ Add Medicine</button>
+
+<div class="section-title">My Medicines</div>
+<div class="medicines-list" id="medicines-container">
+<div class="empty-state"><div class="emoji">💊</div><h3>No medicines added</h3><p style="margin-top:8px;font-size:0.85rem">Click '+ Add Medicine' to start tracking.</p></div>
+</div>
+</div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",authDomain:"helthchain.firebaseapp.com",projectId:"helthchain",storageBucket:"helthchain.appspot.com",messagingSenderId:"682542534348",appId:"1:682542534348:web:bedb3583d7d2eb49a57c69"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+let currentUser=null;
+let selectedTimings=[];
+let editingId=null;
+const toast=document.getElementById('toast');
+const toastMsg=document.getElementById('toast-msg');
+const toastIcon=document.getElementById('toast-icon');
+let toastTimeout=null;
+function showToast(m,t='info'){clearTimeout(toastTimeout);toastMsg.textContent=m;toastIcon.textContent=t==='error'?'⚠️':t==='success'?'✅':'ℹ️';toast.className=`toast ${t} show`;toastTimeout=setTimeout(()=>{toast.classList.remove('show')},4000)}
+function escapeHtml(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+
+auth.onAuthStateChanged(async u=>{
+  if(!u){window.location.replace('login.html');return}
+  currentUser=u;
+  document.getElementById('global-loader').style.display='none';
+  if('Notification' in window&&Notification.permission==='default')Notification.requestPermission();
+  loadMedicines();
+});
+
+function openModal(){
+  editingId=null;
+  document.getElementById('modalTitle').textContent='💊 Add Medicine';
+  document.getElementById('medForm').reset();
+  selectedTimings=[];
+  document.querySelectorAll('.timing-option').forEach(t=>t.classList.remove('active'));
+  document.getElementById('addModal').classList.add('show');
+  setTimeout(()=>document.getElementById('medName').focus(),100);
+}
+function closeModal(){document.getElementById('addModal').classList.remove('show');editingId=null}
+function toggleTiming(el){
+  const t=el.dataset.time;
+  el.classList.toggle('active');
+  if(el.classList.contains('active')){if(!selectedTimings.includes(t))selectedTimings.push(t)}
+  else{selectedTimings=selectedTimings.filter(x=>x!==t)}
+}
+function updateTimingOptions(){}
+
+async function saveMedicine(){
+  const sb=document.getElementById('saveBtn');
+  const n=document.getElementById('medName').value.trim();
+  const d=document.getElementById('medDosage').value.trim();
+  const f=document.getElementById('medFreq').value;
+  if(!n||!d||!f){showToast('Name, dosage and frequency required','error');return}
+  const oh=sb.innerHTML;sb.disabled=true;sb.innerHTML='<span class="btn-spinner"></span> Saving...';
+  try{
+    const data={
+      patientId:currentUser.uid,
+      patientEmail:currentUser.email.toLowerCase(),
+      name:n,
+      dosage:d,
+      type:document.getElementById('medType').value,
+      frequency:f,
+      timings:selectedTimings,
+      reminderTime:document.getElementById('medReminder').value||null,
+      startDate:document.getElementById('medStart').value||null,
+      endDate:document.getElementById('medEnd').value||null,
+      notes:document.getElementById('medNotes').value.trim()||null,
+      active:true,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if(editingId){
+      await db.collection('medications').doc(editingId).update(data);
+      showToast('Medicine updated 🎉','success');
+    }else{
+      data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('medications').add(data);
+      showToast('Medicine added 🎉','success');
+    }
+    closeModal();
+  }catch(e){showToast('Error: '+e.message,'error')}
+  finally{sb.disabled=false;sb.innerHTML=oh}
+}
+
+function loadMedicines(){
+  db.collection('medications').where('patientId','==',currentUser.uid).where('active','==',true).onSnapshot(q=>{
+    const c=document.getElementById('medicines-container');
+    document.getElementById('total-meds').textContent=q.size;
+    let totalDoses=0;
+    if(q.empty){
+      c.innerHTML=`<div class="empty-state"><div class="emoji">💊</div><h3>No medicines added</h3><p style="margin-top:8px;font-size:0.85rem">Click '+ Add Medicine' to start tracking.</p></div>`;
+      document.getElementById('today-doses').textContent='0';
+      document.getElementById('schedule-area').style.display='none';
+      return;
+    }
+    let html='';
+    const schedule={};
+    q.forEach(d=>{
+      const m=d.data();
+      const freqMap={'Once daily':1,'Twice daily':2,'Thrice daily':3,'Four times daily':4,'Every 4 hours':6,'Every 6 hours':4,'Every 8 hours':3,'Weekly':0,'As needed':0};
+      totalDoses+=(freqMap[m.frequency]||0);
+      const typeEmojis={Tablet:'💊',Capsule:'💊',Syrup:'🥤',Injection:'💉',Drops:'💧',Inhaler:'🫁',Cream:'🧴',Other:'📦'};
+      const e=typeEmojis[m.type]||'💊';
+      const timingsHtml=(m.timings||[]).map(t=>`<span class="timing-chip">${escapeHtml(t)}</span>`).join('');
+      html+=`<div class="medicine-card"><div class="medicine-info"><div class="medicine-name"><span class="medicine-pill">${e}</span>${escapeHtml(m.name)}<span style="font-size:0.8rem;color:var(--text-muted);font-weight:400">(${escapeHtml(m.dosage)})</span></div><div class="medicine-meta"><span>⏱️ ${escapeHtml(m.frequency)}</span>${m.reminderTime?`<span>🔔 ${escapeHtml(m.reminderTime)}</span>`:''}${m.notes?`<span>📝 ${escapeHtml(m.notes)}</span>`:''}</div>${timingsHtml?`<div class="timing-chips">${timingsHtml}</div>`:''}</div><div class="medicine-actions"><button class="icon-btn" onclick="editMedicine('${escapeHtml(d.id)}')">✏️</button><button class="icon-btn danger" onclick="deleteMedicine('${escapeHtml(d.id)}','${escapeHtml(m.name)}')">🗑️</button></div></div>`;
+      (m.timings||[]).forEach(t=>{if(!schedule[t])schedule[t]=[];schedule[t].push(`${m.name} (${m.dosage})`)});
+    });
+    c.innerHTML=html;
+    document.getElementById('today-doses').textContent=totalDoses;
+    
+    // Today's schedule
+    const order=['Morning','Before meal','Afternoon','After meal','Evening','Night'];
+    let scheduleHtml='';
+    order.forEach(t=>{if(schedule[t]){scheduleHtml+=`<div class="schedule-item"><div class="schedule-time">${t}</div><div class="schedule-meds">${schedule[t].map(escapeHtml).join(', ')}</div></div>`}});
+    if(scheduleHtml){document.getElementById('schedule-list').innerHTML=scheduleHtml;document.getElementById('schedule-area').style.display='block'}
+    else{document.getElementById('schedule-area').style.display='none'}
+  },err=>{
+    document.getElementById('medicines-container').innerHTML=`<div class="empty-state" style="color:var(--danger)">Could not load: ${escapeHtml(err.message)}</div>`;
+  });
+}
+
+async function editMedicine(id){
+  try{
+    const doc=await db.collection('medications').doc(id).get();
+    if(!doc.exists)return;
+    const m=doc.data();
+    editingId=id;
+    document.getElementById('modalTitle').textContent='✏️ Edit Medicine';
+    document.getElementById('medName').value=m.name||'';
+    document.getElementById('medDosage').value=m.dosage||'';
+    document.getElementById('medType').value=m.type||'Tablet';
+    document.getElementById('medFreq').value=m.frequency||'';
+    document.getElementById('medReminder').value=m.reminderTime||'';
+    document.getElementById('medStart').value=m.startDate||'';
+    document.getElementById('medEnd').value=m.endDate||'';
+    document.getElementById('medNotes').value=m.notes||'';
+    selectedTimings=[...(m.timings||[])];
+    document.querySelectorAll('.timing-option').forEach(t=>{
+      if(selectedTimings.includes(t.dataset.time))t.classList.add('active');
+      else t.classList.remove('active');
+    });
+    document.getElementById('addModal').classList.add('show');
+  }catch(e){showToast('Failed to load: '+e.message,'error')}
+}
+
+async function deleteMedicine(id,name){
+  if(!confirm(`Stop tracking ${name}?`))return;
+  try{
+    await db.collection('medications').doc(id).update({active:false});
+    showToast(`${name} removed`,'success');
+  }catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+</script>
+</body>
+</html>

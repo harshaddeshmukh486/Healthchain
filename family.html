@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Family Members — HealthChain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060a12;--surface:#0d1520;--surface2:#141f30;--border:#1a2535;--accent:#00d4ff;--accent2:#7c3aed;--text:#e8f0ff;--text-muted:#6b7a99;--success:#10b981;--danger:#ef4444}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+#global-loader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.spinner{border:4px solid rgba(0,212,255,0.1);border-top:4px solid var(--accent);border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite}
+.btn-spinner{border:2px solid rgba(255,255,255,0.3);border-top:2px solid white;border-radius:50%;width:14px;height:14px;animation:spin 0.8s linear infinite;display:inline-block}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 5%;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);text-decoration:none}
+.logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.back-btn{background:transparent;color:var(--text-muted);text-decoration:none;font-size:0.9rem;padding:8px 14px;border:1px solid var(--border);border-radius:8px}
+.container{max-width:900px;margin:0 auto;padding:30px 20px;width:100%;flex:1}
+.header{margin-bottom:30px}
+.header h1{font-family:'Syne',sans-serif;font-size:2rem;margin-bottom:6px}
+.header h1 span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--text-muted);font-size:1rem}
+.add-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;padding:14px 28px;border-radius:50px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;display:inline-flex;align-items:center;gap:8px;margin-bottom:25px}
+.add-btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,212,255,0.3)}
+.members-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+.member-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;transition:0.3s;position:relative}
+.member-card:hover{border-color:var(--accent);transform:translateY(-3px)}
+.member-card.self{border-color:var(--accent);background:linear-gradient(135deg,rgba(0,212,255,0.05),rgba(124,58,237,0.05))}
+.member-avatar{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin-bottom:14px}
+.member-name{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;margin-bottom:4px}
+.member-relation{color:var(--accent);font-size:0.85rem;font-weight:600;margin-bottom:12px}
+.member-info{font-size:0.8rem;color:var(--text-muted);line-height:1.6;margin-bottom:14px}
+.member-info-row{display:flex;justify-content:space-between;padding:4px 0}
+.member-info-row span:last-child{color:var(--text)}
+.member-actions{display:flex;gap:8px;margin-top:14px}
+.action-btn{flex:1;padding:9px;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;border:none;font-family:inherit;text-decoration:none;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.btn-view{background:rgba(0,212,255,0.1);color:var(--accent);border:1px solid rgba(0,212,255,0.3)}
+.btn-view:hover{background:var(--accent);color:white}
+.btn-delete{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.3)}
+.btn-delete:hover{background:var(--danger);color:white}
+.self-badge{position:absolute;top:14px;right:14px;background:var(--accent);color:#000;padding:3px 10px;border-radius:50px;font-size:0.7rem;font-weight:700}
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-muted);grid-column:1/-1}
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:25px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-family:'Syne',sans-serif;margin-bottom:20px;font-size:1.3rem}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;margin-bottom:6px;color:var(--text-muted);font-size:0.85rem}
+.input-field{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:white;outline:none;font-family:inherit;font-size:0.9rem}
+.input-field:focus{border-color:var(--accent)}
+select.input-field{appearance:none;background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;cursor:pointer}
+.modal-actions{display:flex;gap:10px;margin-top:20px}
+.btn{padding:11px 20px;border-radius:50px;font-weight:600;cursor:pointer;border:none;font-size:0.9rem;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;flex:1}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-muted)}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;z-index:10002;max-width:90%;min-width:280px;transition:transform 0.3s;font-size:0.9rem;display:flex;align-items:center;gap:10px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.toast.success{border-color:var(--success);color:var(--success)}
+.toast.info{border-color:var(--accent);color:var(--accent)}
+.info-banner{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2);border-radius:10px;padding:12px 14px;font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:25px}
+.info-banner strong{color:var(--accent)}
+@media(max-width:600px){.members-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="global-loader"><div class="spinner"></div><p style="margin-top:20px;color:var(--text-muted)">Loading...</p></div>
+<div id="toast" class="toast"><span id="toast-icon">ℹ️</span><span id="toast-msg"></span></div>
+
+<div id="addModal" class="modal-overlay" onclick="if(event.target===this)closeAddModal()">
+<div class="modal">
+<h3>👨‍👩‍👧 Add Family Member</h3>
+<form id="memberForm" onsubmit="event.preventDefault();saveMember()">
+<div class="form-group">
+<label>Full Name *</label>
+<input type="text" id="memberName" class="input-field" placeholder="Enter name" maxlength="100" required>
+</div>
+<div class="form-group">
+<label>Relationship *</label>
+<select id="memberRelation" class="input-field" required>
+<option value="">Select relationship</option>
+<option value="Father">👨 Father</option>
+<option value="Mother">👩 Mother</option>
+<option value="Spouse">💑 Spouse</option>
+<option value="Son">👦 Son</option>
+<option value="Daughter">👧 Daughter</option>
+<option value="Brother">👨 Brother</option>
+<option value="Sister">👩 Sister</option>
+<option value="Grandfather">👴 Grandfather</option>
+<option value="Grandmother">👵 Grandmother</option>
+<option value="Uncle">👨 Uncle</option>
+<option value="Aunt">👩 Aunt</option>
+<option value="Other">👤 Other</option>
+</select>
+</div>
+<div class="form-group">
+<label>Date of Birth</label>
+<input type="date" id="memberDob" class="input-field">
+</div>
+<div class="form-group">
+<label>Gender</label>
+<select id="memberGender" class="input-field">
+<option value="">Select gender</option>
+<option value="Male">♂️ Male</option>
+<option value="Female">♀️ Female</option>
+<option value="Other">⚧ Other</option>
+</select>
+</div>
+<div class="form-group">
+<label>Blood Group</label>
+<select id="memberBlood" class="input-field">
+<option value="">Select</option>
+<option value="A+">A+</option><option value="A-">A-</option>
+<option value="B+">B+</option><option value="B-">B-</option>
+<option value="AB+">AB+</option><option value="AB-">AB-</option>
+<option value="O+">O+</option><option value="O-">O-</option>
+<option value="Unknown">Unknown</option>
+</select>
+</div>
+<div class="form-group">
+<label>Mobile Number</label>
+<input type="tel" id="memberMobile" class="input-field" placeholder="10-digit number" maxlength="10">
+</div>
+<div class="form-group">
+<label>Known Allergies / Conditions</label>
+<input type="text" id="memberAllergies" class="input-field" placeholder="e.g. Diabetes, Penicillin allergy" maxlength="300">
+</div>
+<div class="modal-actions">
+<button type="submit" class="btn btn-primary" id="saveBtn">💾 Save Member</button>
+<button type="button" class="btn btn-outline" onclick="closeAddModal()">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<nav>
+<a href="index.html" class="logo">Health<span>Chain</span></a>
+<a href="patient.html" class="back-btn">← Back</a>
+</nav>
+
+<div class="container">
+<div class="header">
+<h1>👨‍👩‍👧 <span>Family Members</span></h1>
+<p>Manage health records for your entire family from one account.</p>
+</div>
+
+<div class="info-banner">
+<strong>🔒 Privacy:</strong> Each family member's records are securely linked to your account. You control who can access them.
+</div>
+
+<button class="add-btn" onclick="openAddModal()">+ Add Family Member</button>
+
+<div class="members-grid" id="members-container">
+<div class="empty-state">Loading...</div>
+</div>
+</div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyD4EPLShl_q7jN2c2DkSKZ3tqjqrKCdavI",authDomain:"helthchain.firebaseapp.com",projectId:"helthchain",storageBucket:"helthchain.appspot.com",messagingSenderId:"682542534348",appId:"1:682542534348:web:bedb3583d7d2eb49a57c69"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+let currentUser=null;
+const toast=document.getElementById('toast');
+const toastMsg=document.getElementById('toast-msg');
+const toastIcon=document.getElementById('toast-icon');
+let toastTimeout=null;
+function showToast(m,t='info'){clearTimeout(toastTimeout);toastMsg.textContent=m;toastIcon.textContent=t==='error'?'⚠️':t==='success'?'✅':'ℹ️';toast.className=`toast ${t} show`;toastTimeout=setTimeout(()=>{toast.classList.remove('show')},4000)}
+function escapeHtml(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+
+const relationEmojis={Father:'👨',Mother:'👩',Spouse:'💑',Son:'👦',Daughter:'👧',Brother:'👨',Sister:'👩',Grandfather:'👴',Grandmother:'👵',Uncle:'👨',Aunt:'👩',Other:'👤'};
+
+auth.onAuthStateChanged(async u=>{
+  if(!u){window.location.replace('login.html');return}
+  currentUser=u;
+  document.getElementById('global-loader').style.display='none';
+  loadMembers();
+});
+
+function openAddModal(){document.getElementById('addModal').classList.add('show');setTimeout(()=>document.getElementById('memberName').focus(),100)}
+function closeAddModal(){document.getElementById('addModal').classList.remove('show');document.getElementById('memberForm').reset()}
+
+async function saveMember(){
+  const sb=document.getElementById('saveBtn');
+  const n=document.getElementById('memberName').value.trim();
+  const r=document.getElementById('memberRelation').value;
+  if(!n||!r){showToast('Name and relationship required','error');return}
+  const oh=sb.innerHTML;sb.disabled=true;sb.innerHTML='<span class="btn-spinner"></span> Saving...';
+  try{
+    await db.collection('family_members').add({
+      ownerId:currentUser.uid,
+      ownerEmail:currentUser.email.toLowerCase(),
+      name:n,
+      relation:r,
+      dob:document.getElementById('memberDob').value||null,
+      gender:document.getElementById('memberGender').value||null,
+      bloodGroup:document.getElementById('memberBlood').value||null,
+      mobile:document.getElementById('memberMobile').value||null,
+      allergies:document.getElementById('memberAllergies').value.trim()||null,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast('Member added successfully! 🎉','success');
+    closeAddModal();
+  }catch(e){showToast('Error: '+e.message,'error')}
+  finally{sb.disabled=false;sb.innerHTML=oh}
+}
+
+function loadMembers(){
+  db.collection('family_members').where('ownerId','==',currentUser.uid).onSnapshot(q=>{
+    const c=document.getElementById('members-container');
+    let html=`<div class="member-card self"><span class="self-badge">YOU</span><div class="member-avatar">👤</div><div class="member-name">${escapeHtml(currentUser.displayName||currentUser.email.split('@')[0])}</div><div class="member-relation">Self (Account Owner)</div><div class="member-info"><div class="member-info-row"><span>Email:</span><span>${escapeHtml(currentUser.email)}</span></div></div><div class="member-actions"><a href="patient.html" class="action-btn btn-view">📊 My Records</a></div></div>`;
+    if(q.empty){
+      html+=`<div class="empty-state" style="grid-column:auto"><div style="font-size:2.5rem;margin-bottom:10px">👨‍👩‍👧</div><p>No family members added yet.</p><p style="margin-top:6px;font-size:0.85rem">Click '+ Add Family Member' to get started.</p></div>`;
+    }else{
+      q.forEach(d=>{
+        const m=d.data();
+        const emoji=relationEmojis[m.relation]||'👤';
+        const age=m.dob?Math.floor((Date.now()-new Date(m.dob).getTime())/(365.25*24*60*60*1000)):null;
+        html+=`<div class="member-card"><div class="member-avatar">${emoji}</div><div class="member-name">${escapeHtml(m.name)}</div><div class="member-relation">${escapeHtml(m.relation)}</div><div class="member-info">${age!==null?`<div class="member-info-row"><span>Age:</span><span>${age} years</span></div>`:''}${m.gender?`<div class="member-info-row"><span>Gender:</span><span>${escapeHtml(m.gender)}</span></div>`:''}${m.bloodGroup?`<div class="member-info-row"><span>Blood:</span><span>${escapeHtml(m.bloodGroup)}</span></div>`:''}${m.allergies?`<div class="member-info-row"><span>Allergies:</span><span>${escapeHtml(m.allergies)}</span></div>`:''}</div><div class="member-actions"><button class="action-btn btn-view" onclick="viewRecords('${escapeHtml(d.id)}','${escapeHtml(m.name)}')">📊 Records</button><button class="action-btn btn-delete" onclick="deleteMember('${escapeHtml(d.id)}','${escapeHtml(m.name)}')">🗑️</button></div></div>`;
+      });
+    }
+    c.innerHTML=html;
+  },err=>{
+    document.getElementById('members-container').innerHTML=`<div class="empty-state" style="color:var(--danger)">Could not load: ${escapeHtml(err.message)}</div>`;
+  });
+}
+
+function viewRecords(id,name){
+  showToast(`Opening ${name}'s records...`,'info');
+  setTimeout(()=>{window.location.href=`patient.html?member=${encodeURIComponent(id)}`},800);
+}
+
+async function deleteMember(id,name){
+  if(!confirm(`Remove ${name} from your family?\n\nTheir records will not be deleted.`))return;
+  try{
+    await db.collection('family_members').doc(id).delete();
+    showToast(`${name} removed`,'success');
+  }catch(e){showToast('Failed: '+e.message,'error')}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAddModal()});
+</script>
+</body>
+</html>

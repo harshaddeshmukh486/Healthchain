@@ -163,10 +163,32 @@ document.addEventListener('DOMContentLoaded', () => {
         globalLoader.classList.remove('hidden');
         if (loaderText) loaderText.textContent = "Connecting to Google...";
       }
-      const provider = new GoogleAuthProvider();
-      signInWithRedirect(auth, provider).catch((err) => {
-        if (globalLoader) globalLoader.classList.add('hidden');
-        showToast(getFriendlyError(err), 'error');
+      import('firebase/auth').then(({ signInWithPopup }) => {
+        const provider = new GoogleAuthProvider();
+        signInWithPopup(auth, provider).then((result) => {
+          redirectHandled = true;
+          const u = result.user;
+          if (loaderText) loaderText.textContent = "Setting up your profile...";
+          
+          const userRef = doc(db, "users", u.uid);
+          setDoc(userRef, {
+            uid: u.uid, 
+            email: u.email.toLowerCase(), 
+            name: u.displayName || "User", 
+            role: selectedRole,
+            lastLogin: serverTimestamp()
+          }, { merge: true }).then(() => {
+            window.location.replace(selectedRole === 'patient' ? 'patient.html' : 'doctor.html');
+          }).catch((err) => {
+            if (globalLoader) globalLoader.classList.add('hidden');
+            showToast(getFriendlyError(err), 'error');
+          });
+        }).catch((err) => {
+          if (globalLoader) globalLoader.classList.add('hidden');
+          if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+            showToast(getFriendlyError(err), 'error');
+          }
+        });
       });
     });
   }

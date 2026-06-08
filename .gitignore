@@ -1,0 +1,28 @@
+# Node dependencies
+node_modules/
+
+# Local env files (containing private Firebase/Gemini keys)
+.env
+.env.local
+.env.*.local
+firebase-config.js
+fix_keys.ps1
+
+# Vite compiled output
+dist/
+dist-ssr/
+
+# IDE files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store

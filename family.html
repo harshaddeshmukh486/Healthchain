@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Family Members — HealthChain</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+  <!-- Tailwind CSS Stylesheet -->
+  <link rel="stylesheet" href="/src/css/style.css" />
+</head>
+<body class="bg-bg text-white font-body min-h-screen flex flex-col">
+
+  <!-- Global Loader -->
+  <div id="global-loader" class="fixed inset-0 bg-bg z-50 flex flex-col items-center justify-center">
+    <div class="animate-spin rounded-full h-12 w-12 border-4 border-accent/20 border-t-accent shadow-md"></div>
+    <p class="mt-5 text-white/50 font-semibold tracking-wide text-sm animate-pulse">Loading family records...</p>
+  </div>
+
+  <!-- Custom Toast Container -->
+  <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[10000] flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none"></div>
+
+  <!-- Add Member Modal -->
+  <div id="addModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[10001] items-center justify-center p-4 hidden" onclick="if(event.target===this) closeAddModal()">
+    <div class="glass-panel max-w-[480px] w-full rounded-2xl p-7 shadow-2xl border border-border animate-fade-up max-h-[90vh] overflow-y-auto">
+      <h3 class="font-heading font-bold text-xl mb-5 flex items-center gap-2">👨‍👩‍👧 Add Family Member</h3>
+      <form id="memberForm">
+        <div class="mb-4">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Full Name <span class="text-danger">*</span></label>
+          <input type="text" id="memberName" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none placeholder:text-white/20 transition-colors" placeholder="Enter name" maxlength="100" required>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Relationship <span class="text-danger">*</span></label>
+            <select id="memberRelation" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none transition-colors appearance-none cursor-pointer" required>
+              <option value="">Select</option>
+              <option value="Father">👨 Father</option>
+              <option value="Mother">👩 Mother</option>
+              <option value="Spouse">💑 Spouse</option>
+              <option value="Son">👦 Son</option>
+              <option value="Daughter">👧 Daughter</option>
+              <option value="Brother">👨 Brother</option>
+              <option value="Sister">👩 Sister</option>
+              <option value="Grandfather">👴 Grandfather</option>
+              <option value="Grandmother">👵 Grandmother</option>
+              <option value="Uncle">👨 Uncle</option>
+              <option value="Aunt">👩 Aunt</option>
+              <option value="Other">👤 Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Date of Birth</label>
+            <input type="date" id="memberDob" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none transition-colors">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Gender</label>
+            <select id="memberGender" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none transition-colors appearance-none cursor-pointer">
+              <option value="">Select gender</option>
+              <option value="Male">♂️ Male</option>
+              <option value="Female">♀️ Female</option>
+              <option value="Other">⚧ Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Blood Group</label>
+            <select id="memberBlood" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none transition-colors appearance-none cursor-pointer">
+              <option value="">Select</option>
+              <option value="A+">A+</option><option value="A-">A-</option>
+              <option value="B+">B+</option><option value="B-">B-</option>
+              <option value="AB+">AB+</option><option value="AB-">AB-</option>
+              <option value="O+">O+</option><option value="O-">O-</option>
+              <option value="Unknown">Unknown</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Mobile Number</label>
+          <input type="tel" id="memberMobile" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none placeholder:text-white/20 transition-colors" placeholder="10-digit number" maxlength="10">
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Known Allergies / Conditions</label>
+          <input type="text" id="memberAllergies" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none placeholder:text-white/20 transition-colors" placeholder="e.g. Diabetes, Penicillin allergy" maxlength="300">
+        </div>
+
+        <div class="flex gap-3 mt-2">
+          <button type="button" class="flex-1 py-3.5 bg-surface hover:bg-border border border-border text-white/70 text-sm font-bold rounded-xl transition-colors cursor-pointer" onclick="closeAddModal()">Cancel</button>
+          <button type="submit" id="saveBtn" class="flex-[1.5] py-3.5 bg-gradient-to-r from-accent to-accent-2 text-white text-sm font-bold rounded-xl cursor-pointer hover:shadow-lg hover:shadow-accent/20 transition-shadow">💾 Save Member</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="sticky top-0 z-45 flex justify-between items-center px-6 md:px-12 py-4 bg-surface/85 backdrop-blur-md border-b border-border">
+    <a href="index.html" class="font-heading font-extrabold text-xl text-white tracking-wide flex items-center gap-2">
+      <div class="w-8 h-8 bg-gradient-to-br from-accent to-accent-2 rounded-lg flex items-center justify-center text-sm shadow-lg shadow-accent/20">👨‍👩‍👧</div>
+      Health<span class="text-transparent bg-clip-text bg-gradient-to-r from-accent to-accent-2">Chain</span>
+    </a>
+    <a href="patient.html" class="px-4 py-2 bg-surface-2 hover:bg-surface border border-border text-white/70 hover:text-white text-xs font-bold rounded-xl transition-colors cursor-pointer">
+      ← Back
+    </a>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="flex-1 w-full max-w-5xl mx-auto px-6 py-10 pb-32">
+    
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 animate-fade-up">
+      <div>
+        <h1 class="font-heading font-extrabold text-3xl mb-2">👨‍👩‍👧 <span class="text-transparent bg-clip-text bg-gradient-to-r from-accent to-accent-2">Family Members</span></h1>
+        <p class="text-xs md:text-sm text-white/50 leading-relaxed">Manage health records for your entire family from one account.</p>
+      </div>
+      <button onclick="openAddModal()" class="shrink-0 px-6 py-3 bg-gradient-to-r from-accent to-accent-2 text-white text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-accent/20 transition-all flex items-center gap-2">
+        + Add Family Member
+      </button>
+    </div>
+
+    <div class="glass-panel border border-accent/20 bg-accent/5 rounded-2xl p-5 mb-8 flex items-center gap-4 animate-fade-up" style="animation-delay: 0.1s;">
+      <div class="text-2xl shrink-0">🔒</div>
+      <p class="text-[11px] text-white/60 leading-relaxed"><strong class="text-accent">Privacy Assured:</strong> Each family member's records are securely linked to your account. You have full control over who can access them.</p>
+    </div>
+
+    <!-- Members Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 animate-fade-up" style="animation-delay: 0.2s;" id="members-container">
+      <!-- Injected via JS -->
+      <div class="col-span-full text-center py-10 text-white/50 font-bold">Loading...</div>
+    </div>
+    
+  </div>
+
+  <!-- Bottom Navigation (Mobile) -->
+  <div class="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl border-t border-border flex justify-around py-2.5 px-2 z-40 md:hidden">
+    <a href="patient.html" class="flex flex-col items-center gap-1 text-white/40 hover:text-accent transition-colors p-2 text-center text-[10px] font-bold">
+      <span class="text-xl">🏠</span> Patient
+    </a>
+    <a href="family.html" class="flex flex-col items-center gap-1 text-accent p-2 text-center text-[10px] font-bold">
+      <span class="text-xl">👨‍👩‍👧</span> Family
+    </a>
+  </div>
+
+  <!-- Modular Script -->
+  <script type="module" src="/src/js/family.js"></script>
+</body>
+</html>

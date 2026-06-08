@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hospital Locator — HealthChain</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+  <!-- Tailwind CSS Stylesheet -->
+  <link rel="stylesheet" href="/src/css/style.css" />
+</head>
+<body class="bg-bg text-white font-body min-h-screen flex flex-col">
+
+  <!-- Global Loader -->
+  <div id="global-loader" class="fixed inset-0 bg-bg z-50 flex flex-col items-center justify-center">
+    <div class="animate-spin rounded-full h-12 w-12 border-4 border-accent/20 border-t-accent shadow-md"></div>
+    <p class="mt-5 text-white/50 font-semibold tracking-wide text-sm animate-pulse">Loading hospitals...</p>
+  </div>
+
+  <!-- Custom Toast Container -->
+  <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[10000] flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none"></div>
+
+  <!-- Add Hospital Modal -->
+  <div id="hospModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[10001] items-center justify-center p-4 hidden" onclick="if(event.target===this) closeModal()">
+    <div class="glass-panel max-w-[550px] w-full rounded-2xl p-7 shadow-2xl border border-border animate-fade-up max-h-[90vh] overflow-y-auto">
+      <h3 id="hospModalTitle" class="font-heading font-bold text-xl mb-5 flex items-center gap-2">🏥 Add Hospital</h3>
+      <form id="hospForm">
+        <input type="hidden" id="hospId">
+        
+        <div class="mb-4">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Hospital Name <span class="text-danger">*</span></label>
+          <input type="text" id="hospName" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none placeholder:text-white/20 transition-colors" placeholder="e.g. Apollo Hospitals" maxlength="150" required>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Type <span class="text-danger">*</span></label>
+            <select id="hospType" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none transition-colors appearance-none cursor-pointer" required>
+              <option value="">Select</option>
+              <option value="Government">Government</option>
+              <option value="Private">Private</option>
+              <option value="Trust">Trust/NGO</option>
+              <option value="Nursing Home">Nursing Home</option>
+              <option value="Clinic">Clinic</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Phone <span class="text-danger">*</span></label>
+            <input type="tel" id="hospPhone" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none placeholder:text-white/20 transition-colors" placeholder="Hospital number" maxlength="15" required>
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Specialties</label>
+          <input type="text" id="hospSpecialties" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none placeholder:text-white/20 transition-colors" placeholder="e.g. Cardiology, Neurology (comma-separated)" maxlength="300">
+        </div>
+        
+        <div class="mb-4">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Full Address <span class="text-danger">*</span></label>
+          <input type="text" id="hospAddress" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none placeholder:text-white/20 transition-colors" placeholder="Complete address" maxlength="300" required>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">City <span class="text-danger">*</span></label>
+            <input type="text" id="hospCity" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none placeholder:text-white/20 transition-colors" placeholder="City" maxlength="50" required>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">PIN Code <span class="text-danger">*</span></label>
+            <input type="text" id="hospPin" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none placeholder:text-white/20 transition-colors" placeholder="6-digit PIN" pattern="[0-9]{6}" maxlength="6" required>
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Emergency Number</label>
+          <input type="tel" id="hospEmergency" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none placeholder:text-white/20 transition-colors" placeholder="Emergency contact (optional)" maxlength="15">
+        </div>
+        
+        <div class="mb-5">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-2">Services Available</label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            <label class="flex items-center gap-3 bg-surface-2 p-3 rounded-xl border border-border cursor-pointer hover:border-accent/50 transition-colors">
+              <input type="checkbox" id="opt24x7" class="w-4 h-4 rounded border-border text-accent focus:ring-accent accent-accent cursor-pointer">
+              <span class="text-xs font-medium">⏰ 24x7 Emergency</span>
+            </label>
+            <label class="flex items-center gap-3 bg-surface-2 p-3 rounded-xl border border-border cursor-pointer hover:border-accent/50 transition-colors">
+              <input type="checkbox" id="optAmbulance" class="w-4 h-4 rounded border-border text-accent focus:ring-accent accent-accent cursor-pointer">
+              <span class="text-xs font-medium">🚑 Ambulance</span>
+            </label>
+            <label class="flex items-center gap-3 bg-surface-2 p-3 rounded-xl border border-border cursor-pointer hover:border-accent/50 transition-colors">
+              <input type="checkbox" id="optICU" class="w-4 h-4 rounded border-border text-accent focus:ring-accent accent-accent cursor-pointer">
+              <span class="text-xs font-medium">🏥 ICU Available</span>
+            </label>
+            <label class="flex items-center gap-3 bg-surface-2 p-3 rounded-xl border border-border cursor-pointer hover:border-accent/50 transition-colors">
+              <input type="checkbox" id="optInsurance" class="w-4 h-4 rounded border-border text-accent focus:ring-accent accent-accent cursor-pointer">
+              <span class="text-xs font-medium">💳 Cashless Insurance</span>
+            </label>
+            <label class="flex items-center gap-3 bg-surface-2 p-3 rounded-xl border border-border cursor-pointer hover:border-accent/50 transition-colors md:col-span-2">
+              <input type="checkbox" id="optAyushman" class="w-4 h-4 rounded border-border text-accent focus:ring-accent accent-accent cursor-pointer">
+              <span class="text-xs font-medium">🪪 Ayushman Bharat (PMJAY)</span>
+            </label>
+          </div>
+        </div>
+        
+        <div class="mb-6">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Notes</label>
+          <input type="text" id="hospNotes" class="w-full bg-surface-2 border border-border focus:border-accent rounded-xl py-3 px-4 text-xs font-medium text-white outline-none placeholder:text-white/20 transition-colors" placeholder="Doctor name, personal experience, etc." maxlength="200">
+        </div>
+        
+        <div class="flex gap-3 mt-2">
+          <button type="button" class="flex-1 py-3.5 bg-surface hover:bg-border border border-border text-white/70 text-sm font-bold rounded-xl transition-colors cursor-pointer" onclick="closeModal()">Cancel</button>
+          <button type="submit" id="saveBtn" class="flex-[1.5] py-3.5 bg-gradient-to-r from-accent to-accent-2 text-white text-sm font-bold rounded-xl cursor-pointer hover:shadow-lg hover:shadow-accent/20 transition-shadow">💾 Save Hospital</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="sticky top-0 z-45 flex justify-between items-center px-6 md:px-12 py-4 bg-surface/85 backdrop-blur-md border-b border-border">
+    <a href="index.html" class="font-heading font-extrabold text-xl text-white tracking-wide flex items-center gap-2">
+      <div class="w-8 h-8 bg-gradient-to-br from-accent to-accent-2 rounded-lg flex items-center justify-center text-sm shadow-lg shadow-accent/20">🏥</div>
+      Health<span class="text-transparent bg-clip-text bg-gradient-to-r from-accent to-accent-2">Chain</span>
+    </a>
+    <a href="patient.html" class="px-4 py-2 bg-surface-2 hover:bg-surface border border-border text-white/70 hover:text-white text-xs font-bold rounded-xl transition-colors cursor-pointer">
+      ← Back
+    </a>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="flex-1 w-full max-w-6xl mx-auto px-6 py-10 pb-32">
+    
+    <div class="mb-6 animate-fade-up">
+      <h1 class="font-heading font-extrabold text-3xl mb-2 flex items-center gap-3">
+        🏥 <span class="text-transparent bg-clip-text bg-gradient-to-r from-accent to-accent-2">Hospital Locator</span>
+      </h1>
+      <p class="text-xs md:text-sm text-white/50 leading-relaxed">Find hospitals, save your trusted ones, and access them quickly in emergencies.</p>
+    </div>
+
+    <div class="glass-panel border border-accent/20 bg-accent/5 rounded-2xl p-5 mb-8 flex items-center gap-4 animate-fade-up" style="animation-delay: 0.1s;">
+      <div class="text-2xl shrink-0">📍</div>
+      <p class="text-[11px] text-white/60 leading-relaxed"><strong class="text-accent">Emergency Ready:</strong> Save your trusted hospitals to access their emergency contacts and location instantly when every second counts.</p>
+    </div>
+
+    <!-- Search Box -->
+    <div class="mb-5 animate-fade-up" style="animation-delay: 0.2s;">
+      <div class="relative">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">🔍</span>
+        <input type="text" id="searchInput" class="w-full bg-surface border border-border focus:border-accent rounded-full py-3.5 pl-11 pr-5 text-sm text-white outline-none transition-colors" placeholder="Search by hospital name, city, or specialty...">
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex gap-2 mb-8 overflow-x-auto pb-2 hide-scrollbar animate-fade-up" style="animation-delay: 0.3s;">
+      <button class="filter-chip px-4 py-2 bg-accent/10 border border-accent text-accent rounded-full text-xs font-bold whitespace-nowrap transition-colors cursor-pointer" data-filter="all" onclick="setFilter(this)">All</button>
+      <button class="filter-chip px-4 py-2 bg-surface border border-border text-white/50 hover:text-white hover:border-accent/50 rounded-full text-xs font-bold whitespace-nowrap transition-colors cursor-pointer" data-filter="emergency" onclick="setFilter(this)">🚨 24x7 Emergency</button>
+      <button class="filter-chip px-4 py-2 bg-surface border border-border text-white/50 hover:text-white hover:border-accent/50 rounded-full text-xs font-bold whitespace-nowrap transition-colors cursor-pointer" data-filter="ambulance" onclick="setFilter(this)">🚑 Ambulance</button>
+      <button class="filter-chip px-4 py-2 bg-surface border border-border text-white/50 hover:text-white hover:border-accent/50 rounded-full text-xs font-bold whitespace-nowrap transition-colors cursor-pointer" data-filter="ayushman" onclick="setFilter(this)">🪪 Ayushman</button>
+      <button class="filter-chip px-4 py-2 bg-surface border border-border text-white/50 hover:text-white hover:border-accent/50 rounded-full text-xs font-bold whitespace-nowrap transition-colors cursor-pointer" data-filter="govt" onclick="setFilter(this)">🏛️ Government</button>
+      <button class="filter-chip px-4 py-2 bg-surface border border-border text-white/50 hover:text-white hover:border-accent/50 rounded-full text-xs font-bold whitespace-nowrap transition-colors cursor-pointer" data-filter="private" onclick="setFilter(this)">🏢 Private</button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex border-b border-border mb-8 overflow-x-auto animate-fade-up" style="animation-delay: 0.4s;">
+      <button class="tab px-6 py-3.5 text-accent border-b-2 border-accent font-bold text-sm whitespace-nowrap transition-colors" onclick="switchTab('saved', this)">💾 My Saved</button>
+      <button class="tab px-6 py-3.5 text-white/50 border-b-2 border-transparent hover:text-white font-bold text-sm whitespace-nowrap transition-colors" onclick="switchTab('directory', this)">📋 Hospital Directory</button>
+    </div>
+
+    <!-- Saved Section -->
+    <div class="section" id="saved-section">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="font-heading font-bold text-lg">Your Saved Hospitals</h2>
+        <button onclick="openModal()" class="px-5 py-2.5 bg-gradient-to-r from-accent to-accent-2 text-white text-xs font-bold rounded-xl hover:shadow-lg hover:shadow-accent/20 transition-all flex items-center gap-2">
+          + Add Hospital
+        </button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="saved-list">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Directory Section -->
+    <div class="section hidden" id="directory-section">
+      <div class="glass-panel border border-accent/20 bg-gradient-to-br from-accent/5 to-accent-2/5 rounded-2xl p-6 md:p-8">
+        <h2 class="font-heading font-extrabold text-xl mb-6 flex items-center gap-2">🌟 Major Indian Hospitals</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" id="directory-list">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </div>
+    
+  </div>
+
+  <!-- Bottom Navigation (Mobile) -->
+  <div class="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl border-t border-border flex justify-around py-2.5 px-2 z-40 md:hidden">
+    <a href="patient.html" class="flex flex-col items-center gap-1 text-white/40 hover:text-accent transition-colors p-2 text-center text-[10px] font-bold">
+      <span class="text-xl">🏠</span> Patient
+    </a>
+    <a href="hospital.html" class="flex flex-col items-center gap-1 text-accent p-2 text-center text-[10px] font-bold">
+      <span class="text-xl">🏥</span> Locator
+    </a>
+  </div>
+
+  <!-- Modular Script -->
+  <script type="module" src="/src/js/hospital.js"></script>
+</body>
+</html>

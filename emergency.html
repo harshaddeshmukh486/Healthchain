@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Emergency SOS — HealthChain</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+  <!-- Tailwind CSS Stylesheet -->
+  <link rel="stylesheet" href="/src/css/style.css" />
+</head>
+<body class="bg-bg text-white font-body min-h-screen flex flex-col">
+
+  <!-- Global Loader -->
+  <div id="global-loader" class="fixed inset-0 bg-bg z-50 flex flex-col items-center justify-center">
+    <div class="animate-spin rounded-full h-12 w-12 border-4 border-accent/20 border-t-accent shadow-md"></div>
+    <p class="mt-5 text-white/50 font-semibold tracking-wide text-sm animate-pulse">Loading emergency portal...</p>
+  </div>
+
+  <!-- SOS Confirmation Modal -->
+  <div id="sosConfirmModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-panel w-full max-w-[420px] rounded-2xl p-6 text-center border-danger shadow-2xl animate-fade-up">
+      <div class="text-5xl mb-4 animate-bounce">🚨</div>
+      <h3 class="font-heading font-extrabold text-2xl text-danger mb-2">EMERGENCY SOS</h3>
+      <p class="text-sm text-white/70 mb-4">Calling national emergency <strong class="text-danger">112</strong> in...</p>
+      
+      <!-- Countdown -->
+      <div id="countdown" class="font-heading font-extrabold text-6xl text-danger my-5 animate-pulse">5</div>
+      
+      <p class="text-[10px] text-white/45 leading-relaxed mb-6">
+        Your current GPS location and medical profile info will be shared with your emergency contacts via SMS.
+      </p>
+      <div class="flex gap-3">
+        <button id="callNowBtn" class="flex-1 py-3.5 bg-gradient-to-r from-danger to-red-600 text-white font-bold text-xs rounded-xl cursor-pointer hover:shadow-lg hover:shadow-danger/20" type="button">
+          📞 Call Now
+        </button>
+        <button id="cancelSosBtn" class="px-5 py-3.5 bg-surface border border-border text-white/70 font-semibold text-xs rounded-xl cursor-pointer" type="button">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Contact Modal -->
+  <div id="contactModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-panel w-full max-w-[460px] rounded-2xl p-6 shadow-2xl animate-fade-up">
+      <h3 id="contactTitle" class="font-heading font-bold text-base mb-4 flex items-center gap-2">📞 Add Emergency Contact</h3>
+      <form id="contactForm" class="flex flex-col gap-4">
+        <input type="hidden" id="contactId">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs text-white/45 font-semibold">Full Name *</label>
+          <input type="text" id="contactName" class="w-full bg-bg border border-border focus:border-accent focus:ring-1 focus:ring-accent rounded-xl py-3 px-4 text-xs text-white outline-none transition-all" placeholder="Contact name" maxlength="100" required>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs text-white/45 font-semibold">Relationship *</label>
+          <select id="contactRel" class="w-full bg-bg border border-border focus:border-accent focus:ring-1 focus:ring-accent rounded-xl py-3 px-4 text-xs text-white outline-none transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff4d%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_16px_center] bg-[length:10px_10px]" required>
+            <option value="">Select</option>
+            <option value="Father">Father</option>
+            <option value="Mother">Mother</option>
+            <option value="Spouse">Spouse</option>
+            <option value="Brother">Brother</option>
+            <option value="Sister">Sister</option>
+            <option value="Son">Son</option>
+            <option value="Daughter">Daughter</option>
+            <option value="Family Doctor">Family Doctor</option>
+            <option value="Neighbor">Neighbor</option>
+            <option value="Friend">Friend</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs text-white/45 font-semibold">Phone Number *</label>
+          <input type="tel" id="contactPhone" class="w-full bg-bg border border-border focus:border-accent focus:ring-1 focus:ring-accent rounded-xl py-3 px-4 text-xs text-white outline-none transition-all placeholder:text-white/25" placeholder="10-digit number" pattern="[0-9]{10}" maxlength="10" required>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs text-white/45 font-semibold">Address (Optional)</label>
+          <input type="text" id="contactAddress" class="w-full bg-bg border border-border focus:border-accent focus:ring-1 focus:ring-accent rounded-xl py-3 px-4 text-xs text-white outline-none transition-all placeholder:text-white/20" placeholder="Helpful for ambulance navigation" maxlength="200">
+        </div>
+        
+        <label class="flex items-center gap-2.5 bg-surface-2/65 p-3 rounded-xl border border-border cursor-pointer text-xs select-none">
+          <input type="checkbox" id="contactPrimary" class="w-4.5 h-4.5 cursor-pointer accent-accent">
+          <span class="text-white/80 font-medium">⭐ Mark as Primary Emergency Contact</span>
+        </label>
+
+        <div class="flex gap-3 mt-2">
+          <button type="submit" id="saveContactBtn" class="flex-1 py-3 bg-gradient-to-r from-accent to-accent-2 text-white font-bold text-xs rounded-xl cursor-pointer hover:shadow-lg hover:shadow-accent/15">
+            💾 Save Contact
+          </button>
+          <button type="button" id="cancelContactBtn" class="px-5 py-3 bg-surface border border-border text-white/70 font-semibold text-xs rounded-xl cursor-pointer">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="sticky top-0 z-45 flex justify-between items-center px-6 md:px-12 py-4 bg-surface/85 backdrop-blur-md border-b border-border">
+    <a href="index.html" class="font-heading font-extrabold text-xl text-white tracking-wide">
+      Health<span class="text-transparent bg-clip-text bg-gradient-to-r from-accent to-accent-2">Chain</span>
+    </a>
+    <a href="patient.html" class="px-4 py-2 bg-transparent hover:bg-white/5 border border-border hover:border-white/30 text-white/70 hover:text-white text-xs font-bold rounded-xl transition-all">
+      ← Back
+    </a>
+  </nav>
+
+  <div class="w-full max-w-5xl mx-auto px-6 py-10 flex-1">
+    <!-- Header -->
+    <div class="text-center mb-8 animate-fade-up">
+      <h1 class="font-heading font-extrabold text-3xl md:text-5xl text-danger mb-2">🚨 Emergency SOS</h1>
+      <p class="text-xs md:text-sm text-white/50 max-w-[500px] mx-auto leading-relaxed">One-tap access to emergency services and your trusted contacts.</p>
+    </div>
+
+    <!-- Central SOS Emergency Button -->
+    <div class="bg-gradient-to-br from-danger/5 to-warning/5 border-2 border-danger/35 rounded-2xl p-8 flex flex-col items-center justify-center mb-8 animate-fade-up">
+      <button id="sosBtn" class="w-44 h-44 rounded-full bg-gradient-to-br from-danger to-red-600 hover:scale-105 border-none text-white font-heading font-extrabold text-2xl shadow-2xl shadow-danger/40 transition-all duration-300 flex flex-col items-center justify-center gap-1 cursor-pointer select-none">
+        <span class="text-4xl animate-bounce">🚨</span>
+        <span>SOS</span>
+        <span class="text-[9px] font-normal text-white/60 tracking-wider">TAP FOR HELP</span>
+      </button>
+      <p class="text-xs text-white/50 max-w-[450px] text-center leading-relaxed mt-6">
+        <strong>5-second safety delay</strong> will trigger before dialing India's National Helpline <strong>112</strong>.
+        Your live coordinates and medical emergency parameters will be forwarded to your contacts.
+      </p>
+    </div>
+
+    <!-- National Helplines Grid -->
+    <h3 class="font-heading font-bold text-xs text-white/40 uppercase tracking-widest mb-4 animate-fade-up">📞 National Helplines</h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 animate-fade-up [animation-delay:100ms]">
+      <a href="tel:112" class="glass-panel p-4 rounded-xl flex items-center gap-3 hover:border-danger/40 transition-colors">
+        <div class="w-10 h-10 bg-danger/10 text-danger rounded-xl flex items-center justify-center text-lg flex-shrink-0">🚨</div>
+        <div class="min-w-0">
+          <div class="text-[10px] text-white/40 font-bold uppercase truncate">All Emergency</div>
+          <div class="font-heading font-extrabold text-lg text-danger">112</div>
+        </div>
+      </a>
+      <a href="tel:108" class="glass-panel p-4 rounded-xl flex items-center gap-3 hover:border-danger/40 transition-colors">
+        <div class="w-10 h-10 bg-danger/10 text-danger rounded-xl flex items-center justify-center text-lg flex-shrink-0">🚑</div>
+        <div class="min-w-0">
+          <div class="text-[10px] text-white/40 font-bold uppercase truncate">Ambulance</div>
+          <div class="font-heading font-extrabold text-lg text-danger">108</div>
+        </div>
+      </a>
+      <a href="tel:102" class="glass-panel p-4 rounded-xl flex items-center gap-3 hover:border-danger/40 transition-colors">
+        <div class="w-10 h-10 bg-danger/10 text-danger rounded-xl flex items-center justify-center text-lg flex-shrink-0">🤰</div>
+        <div class="min-w-0">
+          <div class="text-[10px] text-white/40 font-bold uppercase truncate">Mother/Child</div>
+          <div class="font-heading font-extrabold text-lg text-danger">102</div>
+        </div>
+      </a>
+      <a href="tel:100" class="glass-panel p-4 rounded-xl flex items-center gap-3 hover:border-danger/40 transition-colors">
+        <div class="w-10 h-10 bg-danger/10 text-danger rounded-xl flex items-center justify-center text-lg flex-shrink-0">👮</div>
+        <div class="min-w-0">
+          <div class="text-[10px] text-white/40 font-bold uppercase truncate">Police</div>
+          <div class="font-heading font-extrabold text-lg text-danger">100</div>
+        </div>
+      </a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start animate-fade-up [animation-delay:150ms]">
+      <!-- Paramedic quick-info view -->
+      <div class="lg:col-span-1 glass-panel p-6 rounded-2xl flex flex-col gap-4">
+        <h3 class="font-heading font-bold text-xs text-white/40 uppercase tracking-widest pb-3 border-b border-border">🏥 Emergency Info</h3>
+        <div class="text-[10px] bg-accent/5 border border-accent/20 text-white/60 p-3 rounded-lg leading-relaxed mb-1">
+          <strong>📋 For Responders:</strong> This info is visible to first responders during emergencies. Ensure blood group and allergies are accurate.
+        </div>
+        <div id="medicalInfo" class="flex flex-col gap-3 text-xs">
+          <div class="text-white/40 text-center py-4 animate-pulse">Loading medical data...</div>
+        </div>
+      </div>
+
+      <!-- Emergency Contacts (2/3 col) -->
+      <div class="lg:col-span-2 glass-panel p-6 rounded-2xl flex flex-col gap-6">
+        <div class="flex justify-between items-center border-b border-border pb-4 gap-4 flex-wrap">
+          <h3 class="font-heading font-bold text-xs text-white/40 uppercase tracking-widest">👨‍👩‍👧 Emergency Contacts</h3>
+          <button id="addContactBtn" class="px-4 py-2 bg-gradient-to-r from-accent to-accent-2 text-white text-xs font-bold rounded-xl cursor-pointer hover:shadow-lg transition-shadow">
+            + Add Contact
+          </button>
+        </div>
+
+        <div id="contacts-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Rendered emergency contacts -->
+          <div class="animate-pulse h-16 bg-surface-2/40 rounded-xl col-span-full"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/src/js/firebase.js';
+    import { onAuthStateChanged } from 'firebase/auth';
+    import { 
+      collection, 
+      doc, 
+      getDoc, 
+      getDocs, 
+      addDoc, 
+      updateDoc,
+      deleteDoc, 
+      query, 
+      where, 
+      onSnapshot, 
+      serverTimestamp,
+      writeBatch
+    } from 'firebase/firestore';
+    import { showToast } from '/src/js/toast.js';
+
+    let currentUser = null;
+    let editingContactId = null;
+    let countdownInterval = null;
+    let contactsUnsubscribe = null;
+
+    const relationEmojis = {
+      Father: '👨', Mother: '👩', Spouse: '💑', Brother: '👨', Sister: '👩',
+      Son: '👦', Daughter: '👧', 'Family Doctor': '🩺', Neighbor: '🏡', Friend: '👤', Other: '👤'
+    };
+
+    // Elements
+    const globalLoader = document.getElementById('global-loader');
+    const medicalInfoContainer = document.getElementById('medicalInfo');
+    const contactsListContainer = document.getElementById('contacts-list');
+    
+    const sosBtn = document.getElementById('sosBtn');
+    const sosConfirmModal = document.getElementById('sosConfirmModal');
+    const countdownEl = document.getElementById('countdown');
+    const callNowBtn = document.getElementById('callNowBtn');
+    const cancelSosBtn = document.getElementById('cancelSosBtn');
+
+    const contactModal = document.getElementById('contactModal');
+    const contactForm = document.getElementById('contactForm');
+    const contactTitle = document.getElementById('contactTitle');
+    const contactIdInput = document.getElementById('contactId');
+    const contactNameInput = document.getElementById('contactName');
+    const contactRelSelect = document.getElementById('contactRel');
+    const contactPhoneInput = document.getElementById('contactPhone');
+    const contactAddressInput = document.getElementById('contactAddress');
+    const contactPrimaryInput = document.getElementById('contactPrimary');
+    
+    const addContactBtn = document.getElementById('addContactBtn');
+    const saveContactBtn = document.getElementById('saveContactBtn');
+    const cancelContactBtn = document.getElementById('cancelContactBtn');
+
+    // ============ AUTH STATE ============
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.replace('login.html');
+        return;
+      }
+      currentUser = user;
+      if (globalLoader) globalLoader.classList.add('hidden');
+      await loadMedicalInfo();
+      loadContacts();
+    });
+
+    // ============ PARAMEDIC MEDICAL INFO ============
+    async function loadMedicalInfo() {
+      try {
+        const userRef = doc(db, 'users', currentUser.uid);
+        const docSnap = await getDoc(userRef);
+        
+        if (!docSnap.exists()) {
+          medicalInfoContainer.innerHTML = `
+            <div class="text-center py-2.5">
+              <p class="text-white/40 mb-2">No medical info completed.</p>
+              <a href="profile.html" class="inline-block text-[10px] px-3.5 py-1.5 bg-accent text-bg font-bold rounded-lg hover:opacity-95">Complete Profile</a>
+            </div>`;
+          return;
+        }
+
+        const d = docSnap.data();
+        let html = '';
+        
+        html += `<div class="flex justify-between border-b border-border/40 pb-2"><span>Name:</span><span class="font-bold text-white/90">${d.fullName || currentUser.displayName || '-'}</span></div>`;
+        
+        if (d.dob) {
+          const age = Math.floor((Date.now() - new Date(d.dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+          html += `<div class="flex justify-between border-b border-border/40 pb-2"><span>Age:</span><span class="font-bold text-white/90">${age} Years</span></div>`;
+        }
+        if (d.gender) {
+          html += `<div class="flex justify-between border-b border-border/40 pb-2"><span>Gender:</span><span class="font-bold text-white/90">${d.gender}</span></div>`;
+        }
+        
+        html += `<div class="flex justify-between border-b border-border/40 pb-2"><span>Blood Group:</span><span class="font-extrabold text-danger text-sm">${d.bloodGroup || 'NOT SET'}</span></div>`;
+        
+        if (d.allergies) {
+          html += `<div class="flex justify-between border-b border-border/40 pb-2"><span>Allergies:</span><span class="font-bold text-warning">${d.allergies}</span></div>`;
+        }
+        if (d.conditions && d.conditions.length) {
+          html += `<div class="flex justify-between border-b border-border/40 pb-2"><span>Conditions:</span><span class="font-bold text-white/90">${d.conditions.join(', ')}</span></div>`;
+        }
+        if (d.medications) {
+          html += `<div class="flex justify-between border-b border-border/40 pb-2"><span>Medications:</span><span class="font-bold text-white/90">${d.medications}</span></div>`;
+        }
+        if (d.mobile) {
+          html += `<div class="flex justify-between border-b border-border/40 pb-2"><span>Mobile:</span><span class="font-bold text-white/90 font-mono">${d.mobile}</span></div>`;
+        }
+        if (d.emergencyName && d.emergencyPhone) {
+          html += `<div class="flex justify-between pb-2"><span>Emergency:</span><span class="font-bold text-white/90">${d.emergencyName} (${d.emergencyPhone})</span></div>`;
+        }
+        
+        medicalInfoContainer.innerHTML = html;
+      } catch (err) {
+        console.error('Error loading emergency info:', err);
+        medicalInfoContainer.innerHTML = `<p class="text-danger text-center py-2.5">Error loading info</p>`;
+      }
+    }
+
+    // ============ SOS TIMER SYSTEM ============
+    function triggerSOS() {
+      sosConfirmModal.classList.remove('hidden');
+      let count = 5;
+      countdownEl.textContent = count;
+      
+      countdownInterval = setInterval(() => {
+        count--;
+        countdownEl.textContent = count;
+        if (count <= 0) {
+          clearInterval(countdownInterval);
+          callEmergencyNow();
+        }
+      }, 1000);
+    }
+
+    if (sosBtn) sosBtn.addEventListener('click', triggerSOS);
+    if (callNowBtn) callNowBtn.addEventListener('click', callEmergencyNow);
+    if (cancelSosBtn) cancelSosBtn.addEventListener('click', cancelSOS);
+
+    function callEmergencyNow() {
+      if (countdownInterval) clearInterval(countdownInterval);
+      sosConfirmModal.classList.add('hidden');
+      
+      // Log SOS to Firebase
+      addDoc(collection(db, 'sos_events'), {
+        patientId: currentUser.uid,
+        patientEmail: currentUser.email.toLowerCase(),
+        triggeredAt: serverTimestamp()
+      }).catch(() => {});
+
+      // Share geolocation if allowed
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          shareLocationToContacts(pos.coords.latitude, pos.coords.longitude);
+        }, () => {}, { timeout: 3000 });
+      }
+
+      window.location.href = 'tel:112';
+    }
+
+    function cancelSOS() {
+      if (countdownInterval) clearInterval(countdownInterval);
+      sosConfirmModal.classList.add('hidden');
+      showToast('SOS Call Cancelled', 'info');
+    }
+
+    async function shareLocationToContacts(lat, lng) {
+      try {
+        const q = query(
+          collection(db, 'emergency_contacts'),
+          where('patientId', '==', currentUser.uid),
+          where('isPrimary', '==', true)
+        );
+        const snap = await getDocs(q);
+        if (snap.empty) return;
+        
+        const primaryContact = snap.docs[0].data();
+        const smsMessage = `EMERGENCY ALERT: I need assistance. My current location: https://maps.google.com/?q=${lat},${lng}`;
+        
+        setTimeout(() => {
+          window.open(`sms:${primaryContact.phone}?body=${encodeURIComponent(smsMessage)}`);
+        }, 1500);
+      } catch (err) {
+        console.error('SOS geo-share error:', err);
+      }
+    }
+
+    // ============ CONTACT MODAL CONTROLS ============
+    function openContactModal() {
+      editingContactId = null;
+      if (contactTitle) contactTitle.textContent = '📞 Add Emergency Contact';
+      if (contactForm) contactForm.reset();
+      if (contactModal) contactModal.classList.remove('hidden');
+      setTimeout(() => contactNameInput.focus(), 100);
+    }
+
+    function closeContactModal() {
+      if (contactModal) contactModal.classList.add('hidden');
+    }
+
+    if (addContactBtn) addContactBtn.addEventListener('click', openContactModal);
+    if (cancelContactBtn) cancelContactBtn.addEventListener('click', closeContactModal);
+
+    // ============ SAVE CONTACT ============
+    if (contactForm) {
+      contactForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const name = contactNameInput.value.trim();
+        const rel = contactRelSelect.value;
+        const phone = contactPhoneInput.value.trim();
+        const isPrimary = contactPrimaryInput.checked;
+
+        if (!name || !rel || !phone) {
+          showToast('Please fill out all required fields', 'error');
+          return;
+        }
+        if (!/^[0-9]{10}$/.test(phone)) {
+          showToast('Phone number must be exactly 10 digits', 'error');
+          return;
+        }
+
+        const originalBtnText = saveContactBtn.innerHTML;
+        saveContactBtn.disabled = true;
+        saveContactBtn.innerHTML = '<span class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white mr-1.5"></span> Saving...';
+
+        try {
+          // If marking as primary, clear all other primary contacts first
+          if (isPrimary) {
+            const q = query(
+              collection(db, 'emergency_contacts'),
+              where('patientId', '==', currentUser.uid),
+              where('isPrimary', '==', true)
+            );
+            const primarySnap = await getDocs(q);
+            const batch = writeBatch(db);
+            primarySnap.forEach(dDoc => {
+              if (dDoc.id !== editingContactId) {
+                batch.update(dDoc.ref, { isPrimary: false });
+              }
+            });
+            await batch.commit();
+          }
+
+          const contactData = {
+            patientId: currentUser.uid,
+            patientEmail: currentUser.email.toLowerCase(),
+            name: name,
+            relation: rel,
+            phone: phone,
+            address: contactAddressInput.value.trim() || null,
+            isPrimary: isPrimary,
+            updatedAt: serverTimestamp()
+          };
+
+          if (editingContactId) {
+            const contactRef = doc(db, 'emergency_contacts', editingContactId);
+            await updateDoc(contactRef, contactData);
+            showToast('Emergency contact updated successfully!', 'success');
+          } else {
+            contactData.createdAt = serverTimestamp();
+            await addDoc(collection(db, 'emergency_contacts'), contactData);
+            showToast('Emergency contact added successfully!', 'success');
+          }
+          
+          closeContactModal();
+        } catch (err) {
+          console.error('Save contact error:', err);
+          showToast(err.message || 'Failed to save contact', 'error');
+        } finally {
+          saveContactBtn.disabled = false;
+          saveContactBtn.innerHTML = originalBtnText;
+        }
+      });
+    }
+
+    // ============ LOAD CONTACTS ============
+    function loadContacts() {
+      const q = query(
+        collection(db, 'emergency_contacts'),
+        where('patientId', '==', currentUser.uid)
+      );
+
+      contactsUnsubscribe = onSnapshot(q, (snapshot) => {
+        contactsListContainer.innerHTML = '';
+        
+        if (snapshot.empty) {
+          contactsListContainer.innerHTML = `
+            <div class="text-center py-8 px-4 border border-dashed border-border rounded-xl bg-surface/30 col-span-full">
+              <span class="text-2xl block mb-2">📞</span>
+              <p class="text-xs text-white/50 mb-1">No emergency contacts added yet.</p>
+              <p class="text-[10px] text-white/30">Click "+ Add Contact" to define your medical fallback network.</p>
+            </div>`;
+          return;
+        }
+
+        const list = [];
+        snapshot.forEach(dDoc => {
+          list.push({ id: dDoc.id, ...dDoc.data() });
+        });
+
+        // Sort: Primary contacts first
+        list.sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
+
+        list.forEach(c => {
+          const emoji = relationEmojis[c.relation] || '👤';
+          const card = document.createElement('div');
+          card.className = `glass-panel p-4.5 rounded-xl border flex items-center justify-between gap-4 transition-colors ${c.isPrimary ? 'border-accent/30 bg-gradient-to-br from-accent/[0.03] to-accent-2/[0.03]' : 'border-border/80'}`;
+          
+          card.innerHTML = `
+            <div class="flex items-center gap-3.5 min-w-0">
+              <div class="w-11 h-11 bg-surface-2 rounded-full flex items-center justify-center text-lg flex-shrink-0">${emoji}</div>
+              <div class="min-w-0">
+                <div class="font-heading font-bold text-xs text-white truncate flex items-center gap-1.5">
+                  ${c.name}
+                  ${c.isPrimary ? '<span class="text-[9px] bg-accent/15 text-accent font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">Primary</span>' : ''}
+                </div>
+                <div class="text-[10px] text-accent font-semibold mt-0.5">${c.relation}</div>
+                <div class="text-[11px] text-white/50 font-mono mt-1">${c.phone}</div>
+              </div>
+            </div>
+            
+            <div class="flex flex-col gap-2 flex-shrink-0">
+              <div class="flex gap-1">
+                <a href="tel:${c.phone}" class="w-7 h-7 bg-success/10 border border-success/30 hover:bg-success hover:text-white rounded-lg flex items-center justify-center text-xs text-success transition-all" title="Call">📞</a>
+                <a href="sms:${c.phone}" class="w-7 h-7 bg-surface-2 border border-border hover:border-accent hover:text-accent rounded-lg flex items-center justify-center text-xs text-white/70 transition-all" title="SMS">💬</a>
+              </div>
+              <div class="flex gap-1 justify-end">
+                <button class="edit-btn w-7 h-7 bg-surface-2 border border-border hover:border-accent hover:text-accent rounded-lg flex items-center justify-center text-[10px] text-white/50 cursor-pointer transition-all" data-id="${c.id}" title="Edit">✏️</button>
+                <button class="delete-btn w-7 h-7 bg-surface-2 border border-border hover:border-danger hover:text-white rounded-lg flex items-center justify-center text-[10px] text-white/50 hover:bg-danger/25 cursor-pointer transition-all" data-id="${c.id}" data-name="${c.name}" title="Delete">🗑️</button>
+              </div>
+            </div>`;
+
+          card.querySelector('.edit-btn').addEventListener('click', (e) => {
+            const cid = e.currentTarget.getAttribute('data-id');
+            editContact(cid);
+          });
+
+          card.querySelector('.delete-btn').addEventListener('click', (e) => {
+            const cid = e.currentTarget.getAttribute('data-id');
+            const cname = e.currentTarget.getAttribute('data-name');
+            deleteContact(cid, cname);
+          });
+
+          contactsListContainer.appendChild(card);
+        });
+      }, (err) => {
+        showToast('Failed to load contacts list.', 'error');
+      });
+    }
+
+    // Edit Contact details
+    async function editContact(id) {
+      try {
+        const docRef = doc(db, 'emergency_contacts', id);
+        const docSnap = await getDoc(docRef);
+        
+        if (!docSnap.exists()) return;
+        const d = docSnap.data();
+
+        editingContactId = id;
+        if (contactTitle) contactTitle.textContent = '✏️ Edit Contact';
+        contactNameInput.value = d.name || '';
+        contactRelSelect.value = d.relation || '';
+        contactPhoneInput.value = d.phone || '';
+        contactAddressInput.value = d.address || '';
+        contactPrimaryInput.checked = !!d.isPrimary;
+        
+        if (contactModal) contactModal.classList.remove('hidden');
+      } catch (err) {
+        showToast('Failed to fetch contact information.', 'error');
+      }
+    }
+
+    // Delete Contact details
+    async function deleteContact(id, name) {
+      if (!confirm(`Are you sure you want to remove ${name} from your emergency list?`)) return;
+      try {
+        await deleteDoc(doc(db, 'emergency_contacts', id));
+        showToast(`${name} removed successfully`, 'success');
+      } catch (err) {
+        showToast('Failed to delete contact: ' + err.message, 'error');
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeContactModal();
+        cancelSOS();
+      }
+    });
+  </script>
+</body>
+</html>

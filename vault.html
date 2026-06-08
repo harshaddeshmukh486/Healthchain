@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="description" content="Health Vault — Secure storage for insurance policies and vaccination records on HealthChain."/>
+<title>Health Vault — HealthChain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060a12;--surface:#0d1520;--surface2:#141f30;--border:#1a2535;--accent:#00d4ff;--accent2:#7c3aed;--text:#e8f0ff;--text-muted:#6b7a99;--success:#10b981;--danger:#ef4444;--warning:#f59e0b}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+
+/* Global Loader */
+#global-loader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.spinner{border:4px solid rgba(0,212,255,0.1);border-top:4px solid var(--accent);border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite}
+.btn-spinner{border:2px solid rgba(255,255,255,0.3);border-top:2px solid white;border-radius:50%;width:14px;height:14px;animation:spin 0.8s linear infinite;display:inline-block}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+/* Navbar */
+nav{display:flex;justify-content:space-between;align-items:center;padding:18px 5%;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);text-decoration:none}
+.logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.back-btn{background:transparent;color:var(--text-muted);text-decoration:none;font-size:0.88rem;padding:8px 14px;border:1px solid var(--border);border-radius:8px;transition:0.2s}
+.back-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Container */
+.container{max-width:1100px;margin:0 auto;padding:30px 20px;width:100%;flex:1}
+.header{margin-bottom:25px}
+.header h1{font-family:'Syne',sans-serif;font-size:2rem;margin-bottom:6px}
+.header h1 span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--text-muted);font-size:0.95rem}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:25px;overflow-x:auto}
+.tab{padding:13px 22px;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;font-weight:600;font-size:0.9rem;white-space:nowrap;transition:0.2s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* Sections */
+.section{display:none}
+.section.active{display:block}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:25px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;align-items:center;gap:12px;transition:0.2s}
+.stat-card:hover{border-color:var(--accent)}
+.stat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.stat-info h3{font-size:1.5rem;margin-bottom:0;font-family:'Syne',sans-serif}
+.stat-info p{color:var(--text-muted);font-size:0.78rem}
+
+/* Cards Grid */
+.add-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;padding:12px 24px;border-radius:50px;font-weight:600;cursor:pointer;font-size:0.92rem;font-family:inherit;display:inline-flex;align-items:center;gap:8px;margin-bottom:22px;transition:0.2s}
+.add-btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,212,255,0.25)}
+.items-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.vault-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;transition:0.2s;position:relative;overflow:hidden}
+.vault-card:hover{border-color:rgba(0,212,255,0.3);transform:translateY(-2px)}
+.vault-card.expired{border-color:rgba(239,68,68,0.3)}
+.vault-card.expiring{border-color:rgba(245,158,11,0.3)}
+.card-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.card-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.icon-insurance{background:rgba(59,130,246,0.1);color:#3B82F6}
+.icon-vaccine{background:rgba(16,185,129,0.1);color:var(--success)}
+.card-title{flex:1;min-width:0}
+.card-title h3{font-family:'Syne',sans-serif;font-size:0.98rem;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-title p{color:var(--text-muted);font-size:0.78rem}
+.card-body{margin-bottom:14px}
+.card-row{display:flex;justify-content:space-between;padding:5px 0;font-size:0.82rem;border-bottom:1px solid rgba(26,37,53,0.5)}
+.card-row:last-child{border-bottom:none}
+.card-row span:first-child{color:var(--text-muted);flex-shrink:0;margin-right:8px}
+.card-row span:last-child{color:var(--text);font-weight:500;text-align:right;word-break:break-all}
+.card-actions{display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap}
+.action-btn{padding:7px 13px;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:0.2s}
+.action-btn:hover{border-color:var(--accent);color:var(--accent)}
+.action-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.expiry-badge{position:absolute;top:14px;right:14px;padding:4px 10px;border-radius:50px;font-size:0.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.badge-active{background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.3)}
+.badge-expiring{background:rgba(245,158,11,0.1);color:var(--warning);border:1px solid rgba(245,158,11,0.3)}
+.badge-expired{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.3)}
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-muted);background:var(--surface);border-radius:14px;border:1px dashed var(--border);grid-column:1/-1}
+.empty-state .emoji{font-size:3.5rem;margin-bottom:10px}
+.empty-state h3{font-family:'Syne',sans-serif;color:var(--text);margin-bottom:6px}
+
+/* Info Banner */
+.info-banner{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2);border-radius:10px;padding:12px 14px;font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:20px}
+.info-banner strong{color:var(--accent)}
+
+/* Modal */
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:10001;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:26px;max-width:550px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-family:'Syne',sans-serif;margin-bottom:18px;font-size:1.2rem}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;margin-bottom:6px;color:var(--text-muted);font-size:0.84rem}
+.input-field{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;color:white;outline:none;font-family:inherit;font-size:0.88rem;transition:0.2s}
+.input-field:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,0.08)}
+select.input-field{appearance:none;background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;cursor:pointer}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.file-upload-label{display:flex;align-items:center;justify-content:center;gap:10px;padding:16px;background:var(--surface2);border:2px dashed var(--border);border-radius:10px;cursor:pointer;color:var(--text-muted);font-size:0.86rem;position:relative;transition:0.2s}
+.file-upload-label:hover,.file-upload-label.file-selected{border-color:var(--accent);color:var(--accent)}
+.file-upload-label.file-selected{border-color:var(--success);color:var(--success)}
+input[type="file"]{position:absolute;opacity:0;pointer-events:none}
+.upload-progress{width:100%;height:4px;background:var(--surface2);border-radius:2px;margin-top:8px;overflow:hidden;display:none}
+.upload-progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width 0.3s}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.btn{padding:12px 22px;border-radius:50px;font-weight:600;cursor:pointer;border:none;font-size:0.9rem;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:0.2s}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;flex:1}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,212,255,0.25)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-muted)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Toast (fallback if polish.js not loaded) */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;z-index:99999;max-width:90%;min-width:280px;transition:transform 0.3s;font-size:0.88rem;display:flex;align-items:center;gap:10px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.toast.success{border-color:var(--success);color:var(--success)}
+.toast.info{border-color:var(--accent);color:var(--accent)}
+
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}.header h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+<div id="global-loader">
+  <div class="spinner"></div>
+  <p style="margin-top:20px;color:var(--text-muted);font-size:0.88rem">Loading Vault...</p>
+</div>
+<div id="toast" class="toast"><span id="toast-icon">ℹ️</span><span id="toast-msg"></span></div>
+
+<!-- Insurance Modal -->
+<div id="insuranceModal" class="modal-overlay" onclick="if(event.target===this)closeModal('insurance')">
+  <div class="modal">
+    <h3 id="insTitle">🛡️ Add Insurance Policy</h3>
+    <form id="insForm" onsubmit="event.preventDefault();saveInsurance()">
+      <input type="hidden" id="insId">
+      <div class="form-group">
+        <label>Policy Type *</label>
+        <select id="insType" class="input-field" required>
+          <option value="">Select type</option>
+          <option value="Individual Health">Individual Health Insurance</option>
+          <option value="Family Floater">Family Floater</option>
+          <option value="Senior Citizen">Senior Citizen</option>
+          <option value="Critical Illness">Critical Illness</option>
+          <option value="Accident">Accident Insurance</option>
+          <option value="Group Health">Group/Corporate Health</option>
+          <option value="Government">Government Scheme (Ayushman Bharat etc)</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Insurance Provider *</label>
+          <input type="text" id="insProvider" class="input-field" placeholder="e.g. Star Health, HDFC Ergo" maxlength="100" required>
+        </div>
+        <div class="form-group">
+          <label>Policy Number *</label>
+          <input type="text" id="insNumber" class="input-field" placeholder="Policy number" maxlength="50" required>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Sum Insured (₹)</label>
+          <input type="number" id="insSum" class="input-field" placeholder="e.g. 500000" min="0">
+        </div>
+        <div class="form-group">
+          <label>Annual Premium (₹)</label>
+          <input type="number" id="insPremium" class="input-field" placeholder="e.g. 12000" min="0">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Start Date *</label>
+          <input type="date" id="insStart" class="input-field" required>
+        </div>
+        <div class="form-group">
+          <label>Expiry Date *</label>
+          <input type="date" id="insExpiry" class="input-field" required>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Helpline Number</label>
+          <input type="tel" id="insPhone" class="input-field" placeholder="Insurance helpline" maxlength="15">
+        </div>
+        <div class="form-group">
+          <label>Members Covered</label>
+          <input type="text" id="insMembers" class="input-field" placeholder="e.g. Self, Spouse, 2 children" maxlength="200">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Upload Policy Document (PDF/Image, max 5MB)</label>
+        <label class="file-upload-label" id="insFileLabel">
+          <span id="insFileText">📎 Click to attach file (optional)</span>
+          <input type="file" id="insFile" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFile(event,'ins')">
+        </label>
+        <div class="upload-progress" id="insProgress"><div class="upload-progress-bar" id="insProgressBar"></div></div>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <input type="text" id="insNotes" class="input-field" placeholder="Coverage details, restrictions" maxlength="300">
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary" id="insSaveBtn">💾 Save Policy</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('insurance')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Vaccination Modal -->
+<div id="vaccineModal" class="modal-overlay" onclick="if(event.target===this)closeModal('vaccine')">
+  <div class="modal">
+    <h3 id="vacTitle">💉 Add Vaccination</h3>
+    <form id="vacForm" onsubmit="event.preventDefault();saveVaccine()">
+      <input type="hidden" id="vacId">
+      <div class="form-group">
+        <label>Vaccine Name *</label>
+        <select id="vacName" class="input-field" required onchange="checkOtherVac()">
+          <option value="">Select vaccine</option>
+          <optgroup label="Childhood Vaccines">
+            <option value="BCG">BCG</option>
+            <option value="Hepatitis B">Hepatitis B</option>
+            <option value="OPV">OPV (Polio)</option>
+            <option value="DPT">DPT</option>
+            <option value="MMR">MMR (Measles, Mumps, Rubella)</option>
+            <option value="Chickenpox">Chickenpox (Varicella)</option>
+            <option value="Typhoid">Typhoid</option>
+            <option value="Rotavirus">Rotavirus</option>
+            <option value="Pneumococcal">Pneumococcal</option>
+            <option value="Hib">Hib</option>
+          </optgroup>
+          <optgroup label="Adult Vaccines">
+            <option value="COVID-19">COVID-19</option>
+            <option value="Influenza">Influenza (Flu)</option>
+            <option value="Tetanus">Tetanus</option>
+            <option value="Hepatitis A">Hepatitis A</option>
+            <option value="HPV">HPV</option>
+            <option value="Pneumonia">Pneumonia</option>
+            <option value="Shingles">Shingles</option>
+            <option value="Meningococcal">Meningococcal</option>
+          </optgroup>
+          <optgroup label="Travel Vaccines">
+            <option value="Yellow Fever">Yellow Fever</option>
+            <option value="Japanese Encephalitis">Japanese Encephalitis</option>
+            <option value="Rabies">Rabies</option>
+            <option value="Cholera">Cholera</option>
+          </optgroup>
+          <option value="Other">Other (specify)</option>
+        </select>
+      </div>
+      <div class="form-group" id="otherVacGroup" style="display:none">
+        <label>Specify Vaccine Name</label>
+        <input type="text" id="vacOther" class="input-field" placeholder="Vaccine name" maxlength="100">
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Dose Number</label>
+          <select id="vacDose" class="input-field">
+            <option value="">Select</option>
+            <option value="1st Dose">1st Dose</option>
+            <option value="2nd Dose">2nd Dose</option>
+            <option value="3rd Dose">3rd Dose</option>
+            <option value="Booster">Booster</option>
+            <option value="Annual">Annual</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date Taken *</label>
+          <input type="date" id="vacDate" class="input-field" required>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Vaccination Center</label>
+          <input type="text" id="vacCenter" class="input-field" placeholder="Hospital/clinic name" maxlength="150">
+        </div>
+        <div class="form-group">
+          <label>Batch Number</label>
+          <input type="text" id="vacBatch" class="input-field" placeholder="Optional" maxlength="50">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Next Due Date</label>
+        <input type="date" id="vacNext" class="input-field">
+      </div>
+      <div class="form-group">
+        <label>Upload Certificate (PDF/Image, max 5MB)</label>
+        <label class="file-upload-label" id="vacFileLabel">
+          <span id="vacFileText">📎 Click to attach file (optional)</span>
+          <input type="file" id="vacFile" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFile(event,'vac')">
+        </label>
+        <div class="upload-progress" id="vacProgress"><div class="upload-progress-bar" id="vacProgressBar"></div></div>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <input type="text" id="vacNotes" class="input-field" placeholder="Side effects, doctor name" maxlength="300">
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary" id="vacSaveBtn">💾 Save Vaccination</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('vaccine')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Navbar -->
+<nav>
+  <a href="index.html" class="logo">Health<span>Chain</span></a>
+  <a href="patient.html" class="back-btn">← Back to Dashboard</a>
+</nav>
+
+<!-- Main Content -->
+<div class="container">
+  <div class="header">
+    <h1>🔐 <span>Health Vault</span></h1>
+    <p>Secure storage for insurance policies and vaccination records.</p>
+  </div>
+
+  <div class="info-banner">
+    <strong>🛡️ Encrypted Storage:</strong> All documents are stored on Cloudinary CDN. Your records are linked to your account only — no one else can see them.
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon icon-insurance">🛡️</div>
+      <div class="stat-info"><h3 id="ins-count">0</h3><p>Insurance Policies</p></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon icon-vaccine">💉</div>
+      <div class="stat-info"><h3 id="vac-count">0</h3><p>Vaccinations</p></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(245,158,11,0.1);color:var(--warning)">⚠️</div>
+      <div class="stat-info"><h3 id="exp-count">0</h3><p>Expiring / Due Soon</p></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('insurance',this)">🛡️ Insurance</div>
+    <div class="tab" onclick="switchTab('vaccine',this)">💉 Vaccinations</div>
+  </div>
+
+  <!-- Insurance Section -->
+  <div class="section active" id="insurance-section">
+    <button class="add-btn" onclick="openModal('insurance')">+ Add Insurance Policy</button>
+    <div class="items-grid" id="insurance-list">
+      <div class="empty-state">
+        <div class="emoji">🛡️</div>
+        <h3>No insurance policies</h3>
+        <p style="margin-top:8px;font-size:0.85rem">Add your health insurance policies for quick access during emergencies.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vaccine Section -->
+  <div class="section" id="vaccine-section">
+    <button class="add-btn" onclick="openModal('vaccine')">+ Add Vaccination</button>
+    <div class="items-grid" id="vaccine-list">
+      <div class="empty-state">
+        <div class="emoji">💉</div>
+        <h3>No vaccinations recorded</h3>
+        <p style="margin-top:8px;font-size:0.85rem">Track your vaccination history and get due date reminders.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vite module script (Firebase v10 modular, env-based config) -->
+<script type="module" src="/src/js/vault.js"></script>
+</body>
+</html>

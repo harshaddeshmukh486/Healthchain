@@ -195,5 +195,33 @@
 
   <!-- Modular Script -->
   <script type="module" src="/src/js/medicines.js"></script>
+
+  <!-- Instagram-Style Bottom Navigation -->
+  <nav class="fixed bottom-0 left-0 w-full bg-surface/85 backdrop-blur-md border-t border-border z-50 pb-safe">
+    <div class="max-w-[720px] mx-auto px-6 py-3 flex justify-between items-center">
+      <a href="patient.html" class="flex flex-col items-center gap-1.5 w-16 text-white/50 hover:text-white transition-all hover:-translate-y-1">
+        <div class="text-2xl grayscale opacity-70 hover:grayscale-0 hover:opacity-100">🏠</div>
+        <span class="text-[9px] font-bold tracking-wider uppercase">Home</span>
+      </a>
+      <a href="ai-agent.html" class="flex flex-col items-center gap-1.5 w-16 text-white/50 hover:text-white transition-all hover:-translate-y-1">
+        <div class="text-2xl grayscale opacity-70 hover:grayscale-0 hover:opacity-100">💬</div>
+        <span class="text-[9px] font-bold tracking-wider uppercase">AI Agent</span>
+      </a>
+      <a href="blockchain.html" class="flex flex-col items-center gap-1.5 w-16 text-white/50 hover:text-white transition-all hover:-translate-y-1">
+        <div class="text-2xl grayscale opacity-70 hover:grayscale-0 hover:opacity-100">🔗</div>
+        <span class="text-[9px] font-bold tracking-wider uppercase">Blockchain</span>
+      </a>
+      <a href="profile.html" class="flex flex-col items-center gap-1.5 w-16 text-white/50 hover:text-white transition-all hover:-translate-y-1">
+        <div class="text-2xl grayscale opacity-70 hover:grayscale-0 hover:opacity-100">👤</div>
+        <span class="text-[9px] font-bold tracking-wider uppercase">Profile</span>
+      </a>
+    </div>
+  </nav>
+
+  <style>
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    body { padding-bottom: 80px; }
+  </style>
+
 </body>
 </html>

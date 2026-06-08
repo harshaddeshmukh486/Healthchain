@@ -132,7 +132,7 @@ document.querySelectorAll('.lang-selector button').forEach(chip => {
     });
     
     // Find chips across both tabs and select the active lang
-    document.querySelectorAll(`.lang-selector button[data-lang="\${selectedLanguage}"]`).forEach(c => {
+    document.querySelectorAll(`.lang-selector button[data-lang="${selectedLanguage}"]`).forEach(c => {
       c.classList.remove('bg-surface-2', 'border-border', 'text-white/50');
       c.classList.add('bg-accent/15', 'border-accent', 'text-accent');
     });
@@ -160,7 +160,7 @@ if (runBtn1) {
     checked.forEach(cb => {
       const report = userReports.find(r => r.id === cb.getAttribute('data-id'));
       if (report) {
-        clinicalText += `\${report.reportName}: \${report.findings} (Status: \${report.status})\n`;
+        clinicalText += `${report.reportName}: ${report.findings} (Status: ${report.status})\n`;
       }
     });
 
@@ -231,7 +231,7 @@ async function runAIAnalysis(clinicalInput, activeBtn) {
     const prompt = `You are a medical AI assistant helping a patient in India understand their health records. Be accurate, empathetic, and actionable.
 
 Patient's Health Records:
-\${clinicalInput}
+${clinicalInput}
 
 Provide analysis in this EXACT markdown format (use ** for bold, - for bullets):
 
@@ -250,7 +250,7 @@ Provide analysis in this EXACT markdown format (use ** for bold, - for bullets):
 ## When to See a Doctor
 (1-2 lines about urgency)
 
-\${langDirective} Keep it concise and practical. Don't diagnose — only highlight patterns and suggest consultation.`;
+${langDirective} Keep it concise and practical. Don't diagnose — only highlight patterns and suggest consultation.`;
 
     // 🔴 NEW: Sending request to the secure backend instead of directly to Google API
     const response = await fetch(`/api/gemini`, {
@@ -285,13 +285,13 @@ Provide analysis in this EXACT markdown format (use ** for bold, - for bullets):
     safeHtml = safeHtml.replace(/^## (.+)$/gm, '<h3 class="font-heading font-bold text-accent text-sm mt-4 mb-2">$1</h3>');
     safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, '<strong class="text-accent font-semibold">$1</strong>');
     safeHtml = safeHtml.replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-white/85 my-1">$1</li>');
-    safeHtml = safeHtml.replace(/(<li class="ml-4 list-disc text-white\\/85 my-1">.+?<\\/li>\\n?)+/g, (match) => `<ul class="my-2">\${match.replace(/\\n/g, '')}</ul>`);
+    safeHtml = safeHtml.replace(/(<li class="ml-4 list-disc text-white\/85 my-1">.+?<\/li>\n?)+/g, (match) => `<ul class="my-2">${match.replace(/\n/g, '')}</ul>`);
     
-    safeHtml = safeHtml.split(/\\n\\n+/).map(p => {
+    safeHtml = safeHtml.split(/\n\n+/).map(p => {
       p = p.trim();
       if (!p) return '';
       if (p.startsWith('<h3') || p.startsWith('<ul')) return p;
-      return `<p class="my-2 text-xs leading-relaxed text-white/75">\${p.replace(/\\n/g, '<br>')}</p>`;
+      return `<p class="my-2 text-xs leading-relaxed text-white/75">${p.replace(/\n/g, '<br>')}</p>`;
     }).join('');
 
     setTimeout(() => {
@@ -300,7 +300,7 @@ Provide analysis in this EXACT markdown format (use ** for bold, - for bullets):
           <h4 class="font-heading font-bold text-sm text-white">🤖 Secure AI Health Analysis</h4>
           <span class="px-2 py-0.5 bg-success/15 border border-success/30 text-success rounded text-[9px] font-bold">COMPLETE</span>
         </div>
-        <div class="ai-output text-xs leading-relaxed">\${safeHtml}</div>
+        <div class="ai-output text-xs leading-relaxed">${safeHtml}</div>
         <div class="bg-yellow/5 border border-yellow/20 rounded-xl p-3.5 mt-5 leading-relaxed text-[10px] text-white/50">
           <strong>⚠️ Disclaimer:</strong> This clinical overview is for informational support only. Always coordinate diagnostic changes with a doctor.
         </div>
@@ -322,8 +322,8 @@ Provide analysis in this EXACT markdown format (use ** for bold, - for bullets):
 
       document.getElementById('shareResultBtn').onclick = () => {
         const outTxt = document.querySelector('.ai-output').innerText;
-        const wMsg = `*HealthChain AI Analysis* 🏥\n\n\${outTxt}\n\n_⚠️ AI-generated clinical assistance._`;
-        window.open(`https://wa.me/?text=\${encodeURIComponent(wMsg)}`, '_blank');
+        const wMsg = `*HealthChain AI Analysis* 🏥\n\n${outTxt}\n\n_⚠️ AI-generated clinical assistance._`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(wMsg)}`, '_blank');
       };
 
       document.getElementById('clearResultBtn').onclick = () => {
@@ -346,7 +346,7 @@ Provide analysis in this EXACT markdown format (use ** for bold, - for bullets):
       <div class="pb-3 border-b border-border mb-4">
         <h4 class="font-heading font-bold text-sm text-danger">❌ AI Analysis Failed</h4>
       </div>
-      <p class="text-xs text-white/50 leading-relaxed">\${err.message || 'Error connecting to Secure AI Backend.'}</p>
+      <p class="text-xs text-white/50 leading-relaxed">${err.message || 'Error connecting to Secure AI Backend.'}</p>
       <p class="text-[10px] text-white/35 mt-2">Check internet connection or server logs.</p>`;
     resultCard.classList.remove('hidden');
     showToast('AI analysis failed', 'error');

@@ -246,10 +246,10 @@
 
             <!-- File Upload -->
             <div class="flex flex-col gap-1.5">
-              <label class="text-xs text-white/45 font-medium">Report File (Optional — PDF/Image)</label>
+              <label class="text-xs text-white/45 font-medium">Report File (Optional — PDF/Photo)</label>
               <label id="fileLabel" class="w-full bg-bg border-2 border-dashed border-border hover:border-accent hover:text-accent rounded-xl p-6 text-center cursor-pointer transition-colors flex flex-col items-center justify-center gap-1">
-                <span id="fileLabelText" class="text-xs text-white/50 font-medium">📎 Click to attach report file (Optional)</span>
-                <input type="file" id="reportFile" class="hidden" accept=".pdf,.jpg,.jpeg,.png">
+                <span id="fileLabelText" class="text-xs text-white/50 font-medium">📷 Take Photo or Choose File (Max 5MB)</span>
+                <input type="file" id="reportFile" class="hidden" accept="image/*,application/pdf">
               </label>
               <!-- Progress -->
               <div id="uploadProgress" class="w-full h-1 bg-surface-2 rounded-full mt-2 hidden overflow-hidden">

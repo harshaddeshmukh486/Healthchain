@@ -108,15 +108,37 @@
     <a href="doctor.html" class="flex flex-col items-center gap-1 text-white/40 hover:text-accent transition-colors p-2 text-center text-[10px] font-bold">
       <span class="text-xl">👨‍⚕️</span> Doctor
     </a>
-    <a href="blockchain.html" class="flex flex-col items-center gap-1 text-accent p-2 text-center text-[10px] font-bold">
-      <span class="text-xl">🔗</span> Ledger
-    </a>
-  </div>
-
   <!-- Custom Toast Container -->
   <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[10000] flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none"></div>
 
-  <!-- Modular Script -->
+  <!-- Instagram-Style Bottom Navigation -->
+  <nav class="fixed bottom-0 left-0 w-full bg-surface/85 backdrop-blur-md border-t border-border z-50 pb-safe">
+    <div class="max-w-[720px] mx-auto px-6 py-3 flex justify-between items-center">
+      <a href="patient.html" class="flex flex-col items-center gap-1.5 w-16 text-white/50 hover:text-white transition-all hover:-translate-y-1">
+        <div class="text-2xl grayscale opacity-70 hover:grayscale-0 hover:opacity-100">🏠</div>
+        <span class="text-[9px] font-bold tracking-wider uppercase">Home</span>
+      </a>
+      <a href="ai-agent.html" class="flex flex-col items-center gap-1.5 w-16 text-white/50 hover:text-white transition-all hover:-translate-y-1">
+        <div class="text-2xl grayscale opacity-70 hover:grayscale-0 hover:opacity-100">💬</div>
+        <span class="text-[9px] font-bold tracking-wider uppercase">AI Agent</span>
+      </a>
+      <a href="blockchain.html" class="flex flex-col items-center gap-1.5 w-16 text-accent transition-all hover:-translate-y-1">
+        <div class="text-2xl drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">🔗</div>
+        <span class="text-[9px] font-bold tracking-wider uppercase">Blockchain</span>
+      </a>
+      <a href="profile.html" class="flex flex-col items-center gap-1.5 w-16 text-white/50 hover:text-white transition-all hover:-translate-y-1">
+        <div class="text-2xl grayscale opacity-70 hover:grayscale-0 hover:opacity-100">👤</div>
+        <span class="text-[9px] font-bold tracking-wider uppercase">Profile</span>
+      </a>
+    </div>
+  </nav>
+
+  <style>
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    body { padding-bottom: 80px; }
+  </style>
+
+  <!-- Scripts -->
   <script type="module" src="/src/js/blockchain.js"></script>
 </body>
 </html>

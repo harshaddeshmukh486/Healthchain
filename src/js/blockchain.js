@@ -2,6 +2,7 @@ import { auth, db } from './firebase.js';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { showToast } from './toast.js';
+import { connectWallet, storeHashOnBlockchain } from './web3.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   let currentUser = null;
@@ -14,6 +15,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const verifyInput = document.getElementById('verify-input');
   const verifyBtn = document.getElementById('verifyBtn');
   const verifyResult = document.getElementById('verify-result');
+  const connectWalletBtn = document.getElementById('connectWalletBtn');
+  const walletStatus = document.getElementById('wallet-status');
+
+  if (connectWalletBtn) {
+    connectWalletBtn.addEventListener('click', async () => {
+      const address = await connectWallet();
+      if (address && address !== "NO_METAMASK") {
+        connectWalletBtn.classList.add('hidden');
+        walletStatus.classList.remove('hidden');
+        walletStatus.textContent = `Connected: ${address.substring(0,6)}...${address.substring(38)}`;
+      }
+    });
+  }
 
   // Utility
   function escapeHtml(str) {
@@ -149,6 +163,14 @@ document.addEventListener('DOMContentLoaded', () => {
           ? `<span class="bg-success/10 text-success border border-success/30 px-3 py-1 rounded-full text-[10px] font-bold shrink-0">✅ Verified</span>`
           : `<span class="bg-danger/10 text-danger border border-danger/30 px-3 py-1 rounded-full text-[10px] font-bold shrink-0">⚠️ Tamper Detected</span>`;
 
+        const web3BtnHtml = isVerified && storedHash ? `
+            <div class="mt-4 pt-4 border-t border-border flex justify-end">
+              <button class="store-web3-btn px-4 py-2 bg-gradient-to-r from-accent to-accent-2 text-white text-[10px] font-bold rounded-lg hover:shadow-lg hover:shadow-accent/20 transition-all cursor-pointer flex items-center gap-2" data-hash="${escapeHtml(storedHash)}" data-uid="${escapeHtml(currentUser.uid)}">
+                🦊 Store on Polygon
+              </button>
+            </div>
+        ` : '';
+
         html += `
           <div class="glass-panel p-6 rounded-2xl border transition-colors ${cardBorderClass}">
             <div class="flex justify-between items-start mb-3 gap-3 flex-wrap">
@@ -179,6 +201,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="mt-3 p-3 bg-danger/10 border border-danger/20 rounded-xl text-xs text-danger leading-relaxed">
               ⚠️ <strong class="font-bold">Tamper Alert:</strong> Stored hash does not match computed hash. Record may have been modified maliciously.
             </div>` : ''}
+            
+            ${web3BtnHtml}
           </div>
         `;
 
@@ -199,6 +223,28 @@ document.addEventListener('DOMContentLoaded', () => {
           if (h) {
             navigator.clipboard.writeText(h).then(() => showToast('Hash copied to clipboard! 📋', 'success'))
               .catch(() => showToast('Hold-press to select', 'info'));
+          }
+        });
+      });
+
+      // Add Web3 store listeners
+      document.querySelectorAll('.store-web3-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const h = e.currentTarget.getAttribute('data-hash');
+          const uid = e.currentTarget.getAttribute('data-uid');
+          
+          e.currentTarget.disabled = true;
+          const originalText = e.currentTarget.innerHTML;
+          e.currentTarget.innerHTML = '⏳ Processing...';
+          
+          const result = await storeHashOnBlockchain(uid, h);
+          if (result && result.success) {
+            e.currentTarget.innerHTML = '✅ Secured On-Chain';
+            e.currentTarget.classList.replace('from-accent', 'from-success');
+            e.currentTarget.classList.replace('to-accent-2', 'to-success');
+          } else {
+            e.currentTarget.disabled = false;
+            e.currentTarget.innerHTML = originalText;
           }
         });
       });

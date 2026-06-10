@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="text-center py-10 border border-danger/30 rounded-2xl bg-danger/5">
           <span class="text-3xl block mb-3 opacity-80">⚠️</span>
           <h3 class="font-heading font-bold text-base text-danger mb-2">Could not load chain</h3>
-          <p class="text-xs text-danger/80">${escapeHtml(err.message || 'Please refresh the page.')}</p>
+          <p class="text-xs text-danger/80 break-words overflow-hidden px-4">${escapeHtml(err.message || 'Please refresh the page.')}</p>
         </div>`;
       showToast('Failed to load ledger', 'error');
     }

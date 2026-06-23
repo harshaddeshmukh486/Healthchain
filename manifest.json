@@ -1,0 +1,9 @@
+{
+  "name": "HealthChain",
+  "short_name": "HealthChain",
+  "description": "AI + Blockchain health records platform for rural Bharat.",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#14b8a6"
+}

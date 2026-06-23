@@ -2,8 +2,18 @@ import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 
+const force404Plugin = () => ({
+  name: 'force-404',
+  configureServer(server) {
+    server.middlewares.use((req, res) => {
+      res.statusCode = 404;
+      res.end('Site is currently down for maintenance.');
+    });
+  }
+});
+
 export default defineConfig({
-  plugins: [tailwindcss()],
+  plugins: [tailwindcss(), force404Plugin()],
   build: {
     rollupOptions: {
       input: {

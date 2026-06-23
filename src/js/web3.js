@@ -10,7 +10,7 @@ const CONTRACT_ABI = [
 
 // NOTE: This will be replaced by the actual deployed contract address on Sepolia Testnet
 // which the user will provide after deploying via Remix IDE.
-export let CONTRACT_ADDRESS = ""; // WILL UPDATE LATER
+export let CONTRACT_ADDRESS = "0x3321Ff1a580C1390bF29155678059057Ab53Eb9d";
 
 let provider;
 let signer;
@@ -49,7 +49,11 @@ export async function connectWallet() {
       return address;
     } catch (error) {
       console.error("Wallet connection error:", error);
-      showToast('Wallet connection failed or rejected.', 'error');
+      if (error.code === -32002) {
+        showToast('Connection request already pending. Please open MetaMask to approve.', 'warning');
+      } else {
+        showToast('Wallet connection failed or rejected.', 'error');
+      }
       return null;
     }
   } else {

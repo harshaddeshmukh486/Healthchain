@@ -12,6 +12,25 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
   <!-- Tailwind CSS Stylesheet -->
   <link rel="stylesheet" href="/src/css/style.css" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- Global Error Handler -->
+  <script type="module" src="/src/js/error-handler.js"></script>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').then(registration => {
+          console.log('SW registered: ', registration.scope);
+        }).catch(registrationError => {
+          console.log('SW registration failed: ', registrationError);
+        });
+      });
+    }
+  </script>
 </head>
 <body class="bg-bg text-white font-body selection:bg-accent selection:text-black">
 
